@@ -11,7 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './co
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './components/ui/dialog';
 import { Textarea } from './components/ui/textarea';
 import { toast } from 'sonner';
-import { Toaster } from './components/ui/toaster';
+import { Toaster } from './components/ui/sonner';
 import { 
   Send, 
   Plus, 
