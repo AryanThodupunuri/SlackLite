@@ -652,20 +652,26 @@ function SidebarContent({
   return (
     <>
       {/* User Profile */}
-      <div className="p-6 border-b border-gray-200">
+      <div className="p-6 border-b border-slate-700">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Avatar className="w-10 h-10">
-              <AvatarFallback className="bg-indigo-100 text-indigo-600">
-                {user.username[0].toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar className="w-12 h-12 ring-2 ring-blue-400 ring-offset-2 ring-offset-slate-800">
+                <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold text-lg">
+                  {user.username[0].toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-slate-800 rounded-full"></div>
+            </div>
             <div>
-              <p className="font-medium">{user.username}</p>
-              <p className="text-sm text-gray-500">Online</p>
+              <p className="font-bold text-white text-lg">{user.username}</p>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <p className="text-sm text-green-400 font-medium">Online</p>
+              </div>
             </div>
           </div>
-          <Button variant="ghost" size="icon" onClick={onLogout}>
+          <Button variant="ghost" size="icon" onClick={onLogout} className="text-gray-400 hover:text-white hover:bg-slate-700">
             <LogOut className="w-4 h-4" />
           </Button>
         </div>
@@ -674,12 +680,17 @@ function SidebarContent({
       {/* Channels */}
       <div className="flex-1 overflow-y-auto">
         <div className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium text-gray-700 flex items-center gap-2">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider flex items-center gap-2">
               <Hash className="w-4 h-4" />
               Channels
             </h3>
-            <Button variant="ghost" size="icon" onClick={onCreateChannel}>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={onCreateChannel}
+              className="text-gray-400 hover:text-white hover:bg-slate-700 w-6 h-6"
+            >
               <Plus className="w-4 h-4" />
             </Button>
           </div>
@@ -689,14 +700,18 @@ function SidebarContent({
               <div
                 key={channel.id}
                 onClick={() => onChannelSelect(channel)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 group ${
                   selectedChannel?.id === channel.id
-                    ? 'bg-indigo-100 text-indigo-700'
-                    : 'hover:bg-gray-100'
+                    ? 'bg-blue-600 text-white shadow-lg'
+                    : 'hover:bg-slate-700 text-gray-300 hover:text-white'
                 }`}
               >
-                <Hash className="w-4 h-4" />
-                <span className="text-sm font-medium">{channel.name}</span>
+                <div className={`w-5 h-5 rounded flex items-center justify-center ${
+                  selectedChannel?.id === channel.id ? 'bg-blue-700' : 'bg-slate-600 group-hover:bg-slate-600'
+                }`}>
+                  <Hash className="w-3 h-3" />
+                </div>
+                <span className="text-sm font-medium flex-1">{channel.name}</span>
                 {!channel.members?.includes(user.id) && (
                   <Button
                     variant="ghost"
@@ -705,7 +720,7 @@ function SidebarContent({
                       e.stopPropagation();
                       onJoinChannel(channel.id);
                     }}
-                    className="ml-auto text-xs"
+                    className="text-xs px-2 py-1 h-6 bg-slate-600 hover:bg-slate-500 text-white ml-auto"
                   >
                     Join
                   </Button>
@@ -716,8 +731,8 @@ function SidebarContent({
         </div>
 
         {/* Direct Messages */}
-        <div className="p-4 border-t border-gray-200">
-          <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+        <div className="p-4 border-t border-slate-700">
+          <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-4 flex items-center gap-2">
             <Users className="w-4 h-4" />
             Direct Messages
           </h3>
@@ -727,23 +742,34 @@ function SidebarContent({
               <div
                 key={otherUser.id}
                 onClick={() => onUserSelect(otherUser)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 group ${
                   selectedUser?.id === otherUser.id
-                    ? 'bg-indigo-100 text-indigo-700'
-                    : 'hover:bg-gray-100'
+                    ? 'bg-purple-600 text-white shadow-lg'
+                    : 'hover:bg-slate-700 text-gray-300 hover:text-white'
                 }`}
               >
                 <div className="relative">
-                  <Avatar className="w-6 h-6">
-                    <AvatarFallback className="text-xs">
+                  <Avatar className="w-7 h-7 ring-1 ring-slate-600">
+                    <AvatarFallback className={`text-xs font-bold ${
+                      selectedUser?.id === otherUser.id 
+                        ? 'bg-purple-700 text-white' 
+                        : 'bg-gradient-to-r from-teal-500 to-cyan-600 text-white'
+                    }`}>
                       {otherUser.username[0].toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   {onlineUsers.has(otherUser.id) && (
-                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-slate-800 rounded-full"></div>
                   )}
                 </div>
-                <span className="text-sm font-medium">{otherUser.username}</span>
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-medium block truncate">{otherUser.username}</span>
+                  {onlineUsers.has(otherUser.id) ? (
+                    <span className="text-xs text-green-400">Online</span>
+                  ) : (
+                    <span className="text-xs text-gray-500">Offline</span>
+                  )}
+                </div>
               </div>
             ))}
           </div>
