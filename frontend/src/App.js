@@ -225,7 +225,7 @@ function App() {
       loadUsers();
       getCurrentUser();
     }
-  }, [token]);
+  }, [token, loadChannels, loadUsers, getCurrentUser]);
 
   const getCurrentUser = useCallback(async () => {
     try {
