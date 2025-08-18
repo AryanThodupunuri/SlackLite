@@ -99,12 +99,18 @@ class Message(BaseModel):
     sender_username: str
     channel_id: Optional[str] = None
     recipient_id: Optional[str] = None
-    message_type: str = "text"  # text, file, image
+    message_type: str = "text"  # text, file, image, system, ephemeral
     file_url: Optional[str] = None
     file_name: Optional[str] = None
     reactions: Dict[str, List[str]] = {}  # emoji -> [user_ids]
     edited_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    # Ephemeral messaging
+    is_ephemeral: bool = False
+    expires_at: Optional[datetime] = None
+    ttl_seconds: Optional[int] = None
+    # Domain-specific data
+    domain_data: Dict[str, Any] = {}
 
 class MessageCreate(BaseModel):
     content: str
