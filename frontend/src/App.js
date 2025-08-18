@@ -564,6 +564,7 @@ function App() {
                 onCreateChannel={() => setShowNewChannelDialog(true)}
                 onJoinChannel={handleJoinChannel}
                 onLogout={handleLogout}
+                domainTypes={domainTypes}
               />
             </div>
           </div>
