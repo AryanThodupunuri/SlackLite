@@ -227,7 +227,7 @@ function App() {
     }
   }, [token]);
 
-  const getCurrentUser = async () => {
+  const getCurrentUser = useCallback(async () => {
     try {
       const response = await axios.get(`${API_URL}/api/auth/me`);
       setUser(response.data);
@@ -235,9 +235,9 @@ function App() {
       console.error('Failed to get current user:', error);
       handleLogout();
     }
-  };
+  }, []);
 
-  const loadChannels = async () => {
+  const loadChannels = useCallback(async () => {
     try {
       const response = await axios.get(`${API_URL}/api/channels`);
       setChannels(response.data);
@@ -247,16 +247,16 @@ function App() {
     } catch (error) {
       toast.error('Failed to load channels');
     }
-  };
+  }, [selectedChannel]);
 
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     try {
       const response = await axios.get(`${API_URL}/api/users`);
       setUsers(response.data);
     } catch (error) {
       toast.error('Failed to load users');
     }
-  };
+  }, []);
 
   // Load domain-specific data when channel changes
   const loadDomainData = useCallback(async () => {
