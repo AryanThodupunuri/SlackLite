@@ -1009,6 +1009,16 @@ function MessageItem({
               edited
             </span>
           )}
+          {message.is_ephemeral && (
+            <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded-full font-medium flex items-center gap-1">
+              ⏱️ ephemeral
+            </span>
+          )}
+          {message.message_type === 'system' && (
+            <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full font-medium">
+              system
+            </span>
+          )}
         </div>
         
         {isEditing ? (
