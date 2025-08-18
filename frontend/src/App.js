@@ -864,37 +864,54 @@ function SidebarContent({
           </div>
           
           <div className="space-y-1">
-            {channels.map((channel) => (
-              <div
-                key={channel.id}
-                onClick={() => onChannelSelect(channel)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 group ${
-                  selectedChannel?.id === channel.id
-                    ? 'bg-blue-600 text-white shadow-lg'
-                    : 'hover:bg-slate-700 text-gray-300 hover:text-white'
-                }`}
-              >
-                <div className={`w-5 h-5 rounded flex items-center justify-center ${
-                  selectedChannel?.id === channel.id ? 'bg-blue-700' : 'bg-slate-600 group-hover:bg-slate-600'
-                }`}>
-                  <Hash className="w-3 h-3" />
+            {channels.map((channel) => {
+              const domainIcon = domainTypes.find(d => d.value === channel.domain_type)?.icon || '💬';
+              return (
+                <div
+                  key={channel.id}
+                  onClick={() => onChannelSelect(channel)}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 group ${
+                    selectedChannel?.id === channel.id
+                      ? 'bg-blue-600 text-white shadow-lg'
+                      : 'hover:bg-slate-700 text-gray-300 hover:text-white'
+                  }`}
+                >
+                  <div className={`w-6 h-6 rounded flex items-center justify-center text-sm ${
+                    selectedChannel?.id === channel.id ? 'bg-blue-700' : 'bg-slate-600 group-hover:bg-slate-600'
+                  }`}>
+                    {channel.domain_type === 'general' ? <Hash className="w-3 h-3" /> : domainIcon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium truncate">{channel.name}</span>
+                      {channel.ttl_enabled && (
+                        <div className="text-xs bg-amber-500 text-white px-1.5 py-0.5 rounded-full">
+                          ⏱️
+                        </div>
+                      )}
+                    </div>
+                    {channel.domain_type !== 'general' && (
+                      <div className="text-xs text-gray-400 capitalize">
+                        {channel.domain_type}
+                      </div>
+                    )}
+                  </div>
+                  {!channel.members?.includes(user.id) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onJoinChannel(channel.id);
+                      }}
+                      className="text-xs px-2 py-1 h-6 bg-slate-600 hover:bg-slate-500 text-white ml-auto"
+                    >
+                      Join
+                    </Button>
+                  )}
                 </div>
-                <span className="text-sm font-medium flex-1">{channel.name}</span>
-                {!channel.members?.includes(user.id) && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onJoinChannel(channel.id);
-                    }}
-                    className="text-xs px-2 py-1 h-6 bg-slate-600 hover:bg-slate-500 text-white ml-auto"
-                  >
-                    Join
-                  </Button>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
