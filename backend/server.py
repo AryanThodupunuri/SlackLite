@@ -75,6 +75,13 @@ class Channel(BaseModel):
     members: List[str] = []
     is_public: bool = True
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    # Ephemeral messaging settings
+    ttl_enabled: bool = False
+    ttl_seconds: int = 3600  # Default 1 hour
+    ttl_options: List[int] = [300, 900, 1800, 3600, 21600, 86400]  # 5min, 15min, 30min, 1h, 6h, 24h
+    # Domain specialization
+    domain_type: str = "general"  # general, sports, study, agile
+    domain_config: Dict[str, Any] = {}
 
 class ChannelCreate(BaseModel):
     name: str
