@@ -235,7 +235,7 @@ function App() {
       console.error('Failed to get current user:', error);
       handleLogout();
     }
-  }, []);
+  }, [handleLogout]);
 
   const loadChannels = useCallback(async () => {
     try {
