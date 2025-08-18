@@ -123,6 +123,87 @@ class MessageEdit(BaseModel):
 class ReactionAdd(BaseModel):
     emoji: str
 
+# Domain-specific models
+
+# Sports Team Models
+class PlayerStats(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    player_id: str
+    player_name: str
+    channel_id: str
+    games_played: int = 0
+    points: int = 0
+    assists: int = 0
+    rebounds: int = 0
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class GameSchedule(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    channel_id: str
+    date: datetime
+    opponent: str
+    location: str
+    status: str = "scheduled"  # scheduled, in_progress, completed, cancelled
+    score_home: Optional[int] = None
+    score_away: Optional[int] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+# Study Group Models
+class Flashcard(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    channel_id: str
+    created_by: str
+    question: str
+    answer: str
+    difficulty: int = 1  # 1-5 scale
+    subject: str
+    tags: List[str] = []
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class StudyMaterial(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    channel_id: str
+    uploaded_by: str
+    title: str
+    file_url: str
+    file_type: str
+    subject: str
+    description: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+# Agile/DevOps Models
+class JiraIntegration(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    channel_id: str
+    jira_url: str
+    project_key: str
+    username: str
+    api_token: str  # Encrypted
+    webhook_url: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class GitHubIntegration(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    channel_id: str
+    repo_owner: str
+    repo_name: str
+    access_token: str  # Encrypted
+    webhook_url: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class SprintInfo(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    channel_id: str
+    sprint_name: str
+    start_date: datetime
+    end_date: datetime
+    story_points_planned: int = 0
+    story_points_completed: int = 0
+    velocity: float = 0.0
+    status: str = "active"  # planning, active, completed
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
 # WebSocket Connection Manager
 class ConnectionManager:
     def __init__(self):
