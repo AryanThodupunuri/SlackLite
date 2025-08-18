@@ -460,12 +460,27 @@ async def leave_channel(channel_id: str, current_user: User = Depends(get_curren
 # Message endpoints
 @app.post("/api/messages", response_model=Message)
 async def send_message(message_data: MessageCreate, current_user: User = Depends(get_current_user)):
+    # Check if message should be ephemeral
+    expires_at = None
+    is_ephemeral = False
+    ttl_seconds = None
+    
+    if message_data.channel_id:
+        expires_at = await calculate_expiry_time(message_data.channel_id)
+        if expires_at:
+            is_ephemeral = True
+            channel = await db.channels.find_one({"id": message_data.channel_id})
+            ttl_seconds = channel.get("ttl_seconds", 3600)
+    
     message = Message(
         content=message_data.content,
         sender_id=current_user.id,
         sender_username=current_user.username,
         channel_id=message_data.channel_id,
-        recipient_id=message_data.recipient_id
+        recipient_id=message_data.recipient_id,
+        is_ephemeral=is_ephemeral,
+        expires_at=expires_at,
+        ttl_seconds=ttl_seconds
     )
     
     await db.messages.insert_one(message.dict())
