@@ -1,52 +1,862 @@
-import { useEffect } from "react";
-import "./App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import axios from 'axios';
+import { Button } from './components/ui/button';
+import { Input } from './components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
+import { Badge } from './components/ui/badge';
+import { Avatar, AvatarFallback } from './components/ui/avatar';
+import { ScrollArea } from './components/ui/scroll-area';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './components/ui/dialog';
+import { Textarea } from './components/ui/textarea';
+import { toast } from 'sonner';
+import { 
+  Send, 
+  Plus, 
+  Hash, 
+  Users, 
+  MessageSquare, 
+  Smile, 
+  Paperclip, 
+  Edit3, 
+  Check, 
+  X,
+  Settings,
+  LogOut,
+  Menu
+} from 'lucide-react';
+import './App.css';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
 
-const Home = () => {
-  const helloWorldApi = async () => {
+function App() {
+  // Auth state
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
+  const [registerForm, setRegisterForm] = useState({ username: '', email: '', password: '' });
+  const [isLogin, setIsLogin] = useState(true);
+
+  // App state
+  const [channels, setChannels] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [selectedChannel, setSelectedChannel] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [editingMessage, setEditingMessage] = useState(null);
+  const [editContent, setEditContent] = useState('');
+  const [ws, setWs] = useState(null);
+  const [onlineUsers, setOnlineUsers] = useState(new Set());
+
+  // UI state
+  const [showNewChannelDialog, setShowNewChannelDialog] = useState(false);
+  const [newChannelName, setNewChannelName] = useState('');
+  const [newChannelDescription, setNewChannelDescription] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(null);
+  const [uploading, setUploading] = useState(false);
+
+  const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  // Popular emojis for quick access
+  const popularEmojis = ['👍', '❤️', '😂', '😮', '😢', '😡', '👏', '🔥', '💯', '✅'];
+
+  // Configure axios defaults
+  useEffect(() => {
+    if (token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    }
+  }, [token]);
+
+  // Authentication
+  const handleLogin = async (e) => {
+    e.preventDefault();
     try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
+      const response = await axios.post(`${API_URL}/api/auth/login`, loginForm);
+      const { access_token, user: userData } = response.data;
+      
+      localStorage.setItem('token', access_token);
+      setToken(access_token);
+      setUser(userData);
+      toast.success(`Welcome back, ${userData.username}!`);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Login failed');
     }
   };
 
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await axios.post(`${API_URL}/api/auth/register`, registerForm);
+      const { access_token, user: userData } = response.data;
+      
+      localStorage.setItem('token', access_token);
+      setToken(access_token);
+      setUser(userData);
+      toast.success(`Welcome to SlackLite, ${userData.username}!`);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Registration failed');
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    setToken(null);
+    setUser(null);
+    if (ws) {
+      ws.close();
+    }
+    toast.success('Logged out successfully');
+  };
+
+  // WebSocket connection
   useEffect(() => {
-    helloWorldApi();
+    if (token && user) {
+      const wsUrl = `${API_URL.replace('http', 'ws')}/api/ws/${token}`;
+      const websocket = new WebSocket(wsUrl);
+
+      websocket.onopen = () => {
+        console.log('WebSocket connected');
+        setWs(websocket);
+      };
+
+      websocket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        handleWebSocketMessage(data);
+      };
+
+      websocket.onclose = () => {
+        console.log('WebSocket disconnected');
+        setWs(null);
+      };
+
+      websocket.onerror = (error) => {
+        console.error('WebSocket error:', error);
+      };
+
+      return () => {
+        websocket.close();
+      };
+    }
+  }, [token, user]);
+
+  const handleWebSocketMessage = useCallback((data) => {
+    switch (data.type) {
+      case 'new_message':
+        setMessages(prev => [...prev, data]);
+        break;
+      case 'message_edited':
+        setMessages(prev => prev.map(msg => 
+          msg.id === data.id ? data : msg
+        ));
+        break;
+      case 'reaction_added':
+        setMessages(prev => prev.map(msg => 
+          msg.id === data.message_id ? { ...msg, reactions: data.reactions } : msg
+        ));
+        break;
+      case 'user_status':
+        setOnlineUsers(prev => {
+          const newSet = new Set(prev);
+          if (data.is_online) {
+            newSet.add(data.user_id);
+          } else {
+            newSet.delete(data.user_id);
+          }
+          return newSet;
+        });
+        break;
+      default:
+        break;
+    }
   }, []);
 
+  // Load initial data
+  useEffect(() => {
+    if (token) {
+      loadChannels();
+      loadUsers();
+      getCurrentUser();
+    }
+  }, [token]);
+
+  const getCurrentUser = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/auth/me`);
+      setUser(response.data);
+    } catch (error) {
+      console.error('Failed to get current user:', error);
+      handleLogout();
+    }
+  };
+
+  const loadChannels = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/channels`);
+      setChannels(response.data);
+      if (response.data.length > 0 && !selectedChannel) {
+        setSelectedChannel(response.data[0]);
+      }
+    } catch (error) {
+      toast.error('Failed to load channels');
+    }
+  };
+
+  const loadUsers = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/users`);
+      setUsers(response.data);
+    } catch (error) {
+      toast.error('Failed to load users');
+    }
+  };
+
+  // Load messages when channel/user selection changes
+  useEffect(() => {
+    if (selectedChannel) {
+      loadChannelMessages(selectedChannel.id);
+      setSelectedUser(null);
+    }
+  }, [selectedChannel]);
+
+  useEffect(() => {
+    if (selectedUser) {
+      loadDirectMessages(selectedUser.id);
+      setSelectedChannel(null);
+    }
+  }, [selectedUser]);
+
+  const loadChannelMessages = async (channelId) => {
+    try {
+      const response = await axios.get(`${API_URL}/api/messages/channel/${channelId}`);
+      setMessages(response.data);
+    } catch (error) {
+      toast.error('Failed to load messages');
+    }
+  };
+
+  const loadDirectMessages = async (userId) => {
+    try {
+      const response = await axios.get(`${API_URL}/api/messages/direct/${userId}`);
+      setMessages(response.data);
+    } catch (error) {
+      toast.error('Failed to load messages');
+    }
+  };
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Channel management
+  const handleCreateChannel = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API_URL}/api/channels`, {
+        name: newChannelName,
+        description: newChannelDescription,
+        is_public: true
+      });
+      
+      setNewChannelName('');
+      setNewChannelDescription('');
+      setShowNewChannelDialog(false);
+      loadChannels();
+      toast.success('Channel created successfully!');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to create channel');
+    }
+  };
+
+  const handleJoinChannel = async (channelId) => {
+    try {
+      await axios.post(`${API_URL}/api/channels/${channelId}/join`);
+      loadChannels();
+      toast.success('Joined channel successfully!');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to join channel');
+    }
+  };
+
+  // Message handling
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!newMessage.trim()) return;
+
+    try {
+      await axios.post(`${API_URL}/api/messages`, {
+        content: newMessage,
+        channel_id: selectedChannel?.id,
+        recipient_id: selectedUser?.id
+      });
+      
+      setNewMessage('');
+    } catch (error) {
+      toast.error('Failed to send message');
+    }
+  };
+
+  const handleEditMessage = async (messageId) => {
+    try {
+      await axios.put(`${API_URL}/api/messages/${messageId}`, {
+        content: editContent
+      });
+      
+      setEditingMessage(null);
+      setEditContent('');
+      toast.success('Message updated!');
+    } catch (error) {
+      toast.error('Failed to edit message');
+    }
+  };
+
+  const handleAddReaction = async (messageId, emoji) => {
+    try {
+      await axios.post(`${API_URL}/api/messages/${messageId}/reactions`, {
+        emoji: emoji
+      });
+      setShowEmojiPicker(null);
+    } catch (error) {
+      toast.error('Failed to add reaction');
+    }
+  };
+
+  // File upload
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const uploadResponse = await axios.post(`${API_URL}/api/upload`, formData);
+      
+      // Send file message
+      await axios.post(`${API_URL}/api/messages`, {
+        content: uploadResponse.data.file_type === 'image' ? 
+          `📷 ${uploadResponse.data.file_name}` : 
+          `📎 ${uploadResponse.data.file_name}`,
+        channel_id: selectedChannel?.id,
+        recipient_id: selectedUser?.id
+      });
+
+      toast.success('File uploaded successfully!');
+    } catch (error) {
+      toast.error('Failed to upload file');
+    } finally {
+      setUploading(false);
+      event.target.value = '';
+    }
+  };
+
+  const formatTimestamp = (timestamp) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now - date;
+    
+    if (diff < 60000) return 'just now';
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+    return date.toLocaleDateString();
+  };
+
+  // Auth UI
+  if (!token || !user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader className="text-center pb-2">
+            <div className="w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl mx-auto mb-4 flex items-center justify-center">
+              <MessageSquare className="w-8 h-8 text-white" />
+            </div>
+            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              SlackLite
+            </CardTitle>
+            <p className="text-gray-600">Real-time messaging made simple</p>
+          </CardHeader>
+          <CardContent>
+            <Tabs value={isLogin ? 'login' : 'register'} onValueChange={(v) => setIsLogin(v === 'login')}>
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="login">Login</TabsTrigger>
+                <TabsTrigger value="register">Sign Up</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="login">
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <Input
+                    placeholder="Username"
+                    value={loginForm.username}
+                    onChange={(e) => setLoginForm({...loginForm, username: e.target.value})}
+                    required
+                  />
+                  <Input
+                    type="password"
+                    placeholder="Password"
+                    value={loginForm.password}
+                    onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
+                    required
+                  />
+                  <Button type="submit" className="w-full">Login</Button>
+                </form>
+              </TabsContent>
+              
+              <TabsContent value="register">
+                <form onSubmit={handleRegister} className="space-y-4">
+                  <Input
+                    placeholder="Username"
+                    value={registerForm.username}
+                    onChange={(e) => setRegisterForm({...registerForm, username: e.target.value})}
+                    required
+                  />
+                  <Input
+                    type="email"
+                    placeholder="Email"
+                    value={registerForm.email}
+                    onChange={(e) => setRegisterForm({...registerForm, email: e.target.value})}
+                    required
+                  />
+                  <Input
+                    type="password"
+                    placeholder="Password"
+                    value={registerForm.password}
+                    onChange={(e) => setRegisterForm({...registerForm, password: e.target.value})}
+                    required
+                  />
+                  <Button type="submit" className="w-full">Create Account</Button>
+                </form>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Main App UI
   return (
-    <div>
-      <header className="App-header">
-        <a
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
+    <div className="h-screen flex bg-gray-50">
+      {/* Mobile Menu */}
+      <Sheet>
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="icon" className="md:hidden fixed top-4 left-4 z-50">
+            <Menu className="w-5 h-5" />
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="left" className="w-80 p-0">
+          <div className="flex flex-col h-full">
+            <SheetHeader className="p-6 border-b">
+              <SheetTitle className="flex items-center gap-2">
+                <MessageSquare className="w-6 h-6 text-indigo-600" />
+                SlackLite
+              </SheetTitle>
+            </SheetHeader>
+            <div className="flex-1 overflow-hidden">
+              {/* Mobile sidebar content */}
+              <SidebarContent 
+                channels={channels}
+                users={users}
+                selectedChannel={selectedChannel}
+                selectedUser={selectedUser}
+                onlineUsers={onlineUsers}
+                user={user}
+                onChannelSelect={setSelectedChannel}
+                onUserSelect={setSelectedUser}
+                onCreateChannel={() => setShowNewChannelDialog(true)}
+                onJoinChannel={handleJoinChannel}
+                onLogout={handleLogout}
+              />
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Desktop Sidebar */}
+      <div className="hidden md:flex w-80 bg-white border-r border-gray-200 flex-col">
+        <SidebarContent 
+          channels={channels}
+          users={users}
+          selectedChannel={selectedChannel}
+          selectedUser={selectedUser}
+          onlineUsers={onlineUsers}
+          user={user}
+          onChannelSelect={setSelectedChannel}
+          onUserSelect={setSelectedUser}
+          onCreateChannel={() => setShowNewChannelDialog(true)}
+          onJoinChannel={handleJoinChannel}
+          onLogout={handleLogout}
+        />
+      </div>
+
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Chat Header */}
+        <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
+          <div className="flex items-center gap-3">
+            {selectedChannel && (
+              <>
+                <Hash className="w-5 h-5 text-gray-500" />
+                <h1 className="text-xl font-semibold">{selectedChannel.name}</h1>
+                <Badge variant="secondary">{selectedChannel.members?.length || 0} members</Badge>
+              </>
+            )}
+            {selectedUser && (
+              <>
+                <Avatar className="w-8 h-8">
+                  <AvatarFallback>{selectedUser.username[0].toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <h1 className="text-xl font-semibold">{selectedUser.username}</h1>
+                {onlineUsers.has(selectedUser.id) && <Badge className="bg-green-500">Online</Badge>}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Messages */}
+        <ScrollArea className="flex-1 p-6">
+          <div className="space-y-4">
+            {messages.map((message) => (
+              <MessageItem
+                key={message.id}
+                message={message}
+                currentUser={user}
+                editingMessage={editingMessage}
+                editContent={editContent}
+                showEmojiPicker={showEmojiPicker}
+                onStartEdit={(msg) => {
+                  setEditingMessage(msg.id);
+                  setEditContent(msg.content);
+                }}
+                onCancelEdit={() => {
+                  setEditingMessage(null);
+                  setEditContent('');
+                }}
+                onSaveEdit={handleEditMessage}
+                onEditContentChange={setEditContent}
+                onShowEmojiPicker={setShowEmojiPicker}
+                onAddReaction={handleAddReaction}
+                popularEmojis={popularEmojis}
+                formatTimestamp={formatTimestamp}
+              />
+            ))}
+          </div>
+          <div ref={messagesEndRef} />
+        </ScrollArea>
+
+        {/* Message Input */}
+        <div className="p-6 bg-white border-t border-gray-200">
+          <form onSubmit={handleSendMessage} className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+            >
+              <Paperclip className="w-5 h-5" />
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              onChange={handleFileUpload}
+              className="hidden"
+              accept="image/*,application/pdf,.doc,.docx,.txt"
+            />
+            <Input
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder={
+                selectedChannel 
+                  ? `Message #${selectedChannel.name}` 
+                  : selectedUser 
+                    ? `Message ${selectedUser.username}` 
+                    : "Select a channel or user to start messaging"
+              }
+              className="flex-1"
+              disabled={!selectedChannel && !selectedUser}
+            />
+            <Button type="submit" disabled={!newMessage.trim() || (!selectedChannel && !selectedUser)}>
+              <Send className="w-4 h-4" />
+            </Button>
+          </form>
+        </div>
+      </div>
+
+      {/* Create Channel Dialog */}
+      <Dialog open={showNewChannelDialog} onOpenChange={setShowNewChannelDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Channel</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateChannel} className="space-y-4">
+            <Input
+              placeholder="Channel name"
+              value={newChannelName}
+              onChange={(e) => setNewChannelName(e.target.value)}
+              required
+            />
+            <Textarea
+              placeholder="Channel description (optional)"
+              value={newChannelDescription}
+              onChange={(e) => setNewChannelDescription(e.target.value)}
+            />
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setShowNewChannelDialog(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">Create Channel</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-};
+}
 
-function App() {
+// Sidebar Component
+function SidebarContent({ 
+  channels, 
+  users, 
+  selectedChannel, 
+  selectedUser, 
+  onlineUsers, 
+  user, 
+  onChannelSelect, 
+  onUserSelect, 
+  onCreateChannel, 
+  onJoinChannel, 
+  onLogout 
+}) {
   return (
-    <div className="App">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+    <>
+      {/* User Profile */}
+      <div className="p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Avatar className="w-10 h-10">
+              <AvatarFallback className="bg-indigo-100 text-indigo-600">
+                {user.username[0].toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="font-medium">{user.username}</p>
+              <p className="text-sm text-gray-500">Online</p>
+            </div>
+          </div>
+          <Button variant="ghost" size="icon" onClick={onLogout}>
+            <LogOut className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Channels */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-gray-700 flex items-center gap-2">
+              <Hash className="w-4 h-4" />
+              Channels
+            </h3>
+            <Button variant="ghost" size="icon" onClick={onCreateChannel}>
+              <Plus className="w-4 h-4" />
+            </Button>
+          </div>
+          
+          <div className="space-y-1">
+            {channels.map((channel) => (
+              <div
+                key={channel.id}
+                onClick={() => onChannelSelect(channel)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                  selectedChannel?.id === channel.id
+                    ? 'bg-indigo-100 text-indigo-700'
+                    : 'hover:bg-gray-100'
+                }`}
+              >
+                <Hash className="w-4 h-4" />
+                <span className="text-sm font-medium">{channel.name}</span>
+                {!channel.members?.includes(user.id) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onJoinChannel(channel.id);
+                    }}
+                    className="ml-auto text-xs"
+                  >
+                    Join
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Direct Messages */}
+        <div className="p-4 border-t border-gray-200">
+          <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            Direct Messages
+          </h3>
+          
+          <div className="space-y-1">
+            {users.filter(u => u.id !== user.id).map((otherUser) => (
+              <div
+                key={otherUser.id}
+                onClick={() => onUserSelect(otherUser)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                  selectedUser?.id === otherUser.id
+                    ? 'bg-indigo-100 text-indigo-700'
+                    : 'hover:bg-gray-100'
+                }`}
+              >
+                <div className="relative">
+                  <Avatar className="w-6 h-6">
+                    <AvatarFallback className="text-xs">
+                      {otherUser.username[0].toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  {onlineUsers.has(otherUser.id) && (
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                  )}
+                </div>
+                <span className="text-sm font-medium">{otherUser.username}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// Message Component
+function MessageItem({ 
+  message, 
+  currentUser, 
+  editingMessage, 
+  editContent, 
+  showEmojiPicker,
+  onStartEdit, 
+  onCancelEdit, 
+  onSaveEdit, 
+  onEditContentChange,
+  onShowEmojiPicker,
+  onAddReaction,
+  popularEmojis,
+  formatTimestamp 
+}) {
+  const isOwn = message.sender_id === currentUser.id;
+  const isEditing = editingMessage === message.id;
+
+  return (
+    <div className={`flex gap-3 group ${isOwn ? 'flex-row-reverse' : ''}`}>
+      <Avatar className="w-8 h-8 flex-shrink-0">
+        <AvatarFallback>{message.sender_username[0].toUpperCase()}</AvatarFallback>
+      </Avatar>
+      
+      <div className={`flex-1 ${isOwn ? 'text-right' : ''}`}>
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-sm font-medium">{message.sender_username}</span>
+          <span className="text-xs text-gray-500">{formatTimestamp(message.created_at)}</span>
+          {message.edited_at && <span className="text-xs text-gray-400">(edited)</span>}
+        </div>
+        
+        {isEditing ? (
+          <div className="space-y-2">
+            <Textarea
+              value={editContent}
+              onChange={(e) => onEditContentChange(e.target.value)}
+              className="w-full"
+            />
+            <div className="flex gap-2">
+              <Button size="sm" onClick={() => onSaveEdit(message.id)}>
+                <Check className="w-3 h-3 mr-1" />
+                Save
+              </Button>
+              <Button size="sm" variant="outline" onClick={onCancelEdit}>
+                <X className="w-3 h-3 mr-1" />
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className={`inline-block max-w-md px-4 py-2 rounded-2xl ${
+              isOwn 
+                ? 'bg-indigo-600 text-white' 
+                : 'bg-gray-100 text-gray-900'
+            }`}>
+              <p className="text-sm">{message.content}</p>
+            </div>
+            
+            {/* Reactions */}
+            {message.reactions && Object.keys(message.reactions).length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {Object.entries(message.reactions).map(([emoji, userIds]) => (
+                  <button
+                    key={emoji}
+                    onClick={() => onAddReaction(message.id, emoji)}
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
+                      userIds.includes(currentUser.id)
+                        ? 'bg-indigo-100 text-indigo-700'
+                        : 'bg-gray-100 hover:bg-gray-200'
+                    }`}
+                  >
+                    <span>{emoji}</span>
+                    <span>{userIds.length}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            
+            {/* Message Actions */}
+            <div className={`flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity ${
+              isOwn ? 'justify-end' : ''
+            }`}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-6 h-6"
+                onClick={() => onShowEmojiPicker(showEmojiPicker === message.id ? null : message.id)}
+              >
+                <Smile className="w-3 h-3" />
+              </Button>
+              
+              {isOwn && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-6 h-6"
+                  onClick={() => onStartEdit(message)}
+                >
+                  <Edit3 className="w-3 h-3" />
+                </Button>
+              )}
+            </div>
+            
+            {/* Emoji Picker */}
+            {showEmojiPicker === message.id && (
+              <div className="flex flex-wrap gap-1 mt-2 p-2 bg-white border border-gray-200 rounded-lg shadow-lg">
+                {popularEmojis.map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => onAddReaction(message.id, emoji)}
+                    className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
