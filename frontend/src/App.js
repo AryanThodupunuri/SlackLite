@@ -257,13 +257,44 @@ function App() {
     }
   };
 
-  // Load messages when channel/user selection changes
+  // Load domain-specific data when channel changes
+  const loadDomainData = useCallback(async () => {
+    if (!selectedChannel) return;
+    
+    try {
+      const domain = selectedChannel.domain_type;
+      
+      if (domain === 'sports') {
+        const [statsResponse, scheduleResponse] = await Promise.all([
+          axios.get(`${API_URL}/api/sports/stats/${selectedChannel.id}`),
+          axios.get(`${API_URL}/api/sports/schedule/${selectedChannel.id}`)
+        ]);
+        setPlayerStats(statsResponse.data);
+        setGameSchedule(scheduleResponse.data);
+      } else if (domain === 'study') {
+        const [flashcardsResponse, materialsResponse] = await Promise.all([
+          axios.get(`${API_URL}/api/study/flashcards/${selectedChannel.id}`),
+          axios.get(`${API_URL}/api/study/materials/${selectedChannel.id}`)
+        ]);
+        setFlashcards(flashcardsResponse.data);
+        setStudyMaterials(materialsResponse.data);
+      } else if (domain === 'agile') {
+        const sprintResponse = await axios.get(`${API_URL}/api/agile/sprint/${selectedChannel.id}`);
+        setActiveSprint(sprintResponse.data);
+      }
+    } catch (error) {
+      console.error('Failed to load domain data:', error);
+    }
+  }, [selectedChannel]);
+
+  // Load domain data when channel selection changes
   useEffect(() => {
     if (selectedChannel) {
       loadChannelMessages(selectedChannel.id);
+      loadDomainData();
       setSelectedUser(null);
     }
-  }, [selectedChannel]);
+  }, [selectedChannel, loadDomainData]);
 
   useEffect(() => {
     if (selectedUser) {
