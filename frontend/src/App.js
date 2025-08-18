@@ -1,32 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Button } from './components/ui/button';
-import { Input } from './components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
-import { Badge } from './components/ui/badge';
-import { Avatar, AvatarFallback } from './components/ui/avatar';
-import { ScrollArea } from './components/ui/scroll-area';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './components/ui/sheet';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './components/ui/dialog';
-import { Textarea } from './components/ui/textarea';
-import { toast } from 'sonner';
-import { Toaster } from './components/ui/sonner';
-import { 
-  Send, 
-  Plus, 
-  Hash, 
-  Users, 
-  MessageSquare, 
-  Smile, 
-  Paperclip, 
-  Edit3, 
-  Check, 
-  X,
-  Settings,
-  LogOut,
-  Menu
-} from 'lucide-react';
 import './App.css';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
