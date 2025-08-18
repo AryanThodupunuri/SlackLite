@@ -801,6 +801,9 @@ function App() {
           </form>
         </DialogContent>
       </Dialog>
+      
+      {/* Toaster for notifications */}
+      <Toaster position="top-right" richColors />
     </div>
   );
 }
