@@ -333,14 +333,23 @@ function App() {
       await axios.post(`${API_URL}/api/channels`, {
         name: newChannelName,
         description: newChannelDescription,
-        is_public: true
+        is_public: true,
+        ttl_enabled: newChannelTTL,
+        ttl_seconds: newChannelTTLSeconds,
+        domain_type: newChannelDomain,
+        domain_config: {}
       });
       
       setNewChannelName('');
       setNewChannelDescription('');
+      setNewChannelDomain('general');
+      setNewChannelTTL(false);
+      setNewChannelTTLSeconds(3600);
       setShowNewChannelDialog(false);
       loadChannels();
-      toast.success('Channel created successfully!');
+      
+      const domainLabel = domainTypes.find(d => d.value === newChannelDomain)?.label || 'General';
+      toast.success(`${domainLabel} channel created successfully!`);
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to create channel');
     }
