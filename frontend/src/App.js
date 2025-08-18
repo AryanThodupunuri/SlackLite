@@ -1,5 +1,32 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
+import { Button } from './components/ui/button';
+import { Input } from './components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
+import { Badge } from './components/ui/badge';
+import { Avatar, AvatarFallback } from './components/ui/avatar';
+import { ScrollArea } from './components/ui/scroll-area';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './components/ui/dialog';
+import { Textarea } from './components/ui/textarea';
+import { toast } from 'sonner';
+import { 
+  Send, 
+  Plus, 
+  Hash, 
+  Users, 
+  MessageSquare, 
+  Smile, 
+  Paperclip, 
+  Edit3, 
+  Check, 
+  X,
+  Settings,
+  LogOut,
+  Menu,
+  Clock
+} from 'lucide-react';
 import './App.css';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
@@ -28,32 +55,17 @@ function App() {
   const [showNewChannelDialog, setShowNewChannelDialog] = useState(false);
   const [newChannelName, setNewChannelName] = useState('');
   const [newChannelDescription, setNewChannelDescription] = useState('');
-  const [newChannelDomain, setNewChannelDomain] = useState('general');
   const [newChannelTTL, setNewChannelTTL] = useState(false);
   const [newChannelTTLSeconds, setNewChannelTTLSeconds] = useState(3600);
   const [showEmojiPicker, setShowEmojiPicker] = useState(null);
   const [uploading, setUploading] = useState(false);
-
-  // Domain-specific state
-  const [playerStats, setPlayerStats] = useState([]);
-  const [gameSchedule, setGameSchedule] = useState([]);
-  const [flashcards, setFlashcards] = useState([]);
-  const [studyMaterials, setStudyMaterials] = useState([]);
-  const [activeSprint, setActiveSprint] = useState(null);
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
   // Popular emojis for quick access
   const popularEmojis = ['👍', '❤️', '😂', '😮', '😢', '😡', '👏', '🔥', '💯', '✅'];
-
-  const domainTypes = [
-    { value: 'general', label: 'General Chat', icon: '💬' },
-    { value: 'sports', label: 'Sports Team', icon: '🏀' },
-    { value: 'study', label: 'Study Group', icon: '📚' },
-    { value: 'agile', label: 'Agile/DevOps', icon: '🚀' }
-  ];
-
+  
   const ttlOptions = [
     { value: 300, label: '5 minutes' },
     { value: 900, label: '15 minutes' },
@@ -101,7 +113,7 @@ function App() {
     }
   };
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = () => {
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
@@ -109,7 +121,7 @@ function App() {
       ws.close();
     }
     toast.success('Logged out successfully');
-  }, [ws]);
+  };
 
   // WebSocket connection
   useEffect(() => {
@@ -159,11 +171,13 @@ function App() {
         break;
       case 'message_expiring':
         // Show expiration warning
-        toast.warning(`Message expiring in ${Math.round((new Date(data.expires_at) - new Date()) / 1000)} seconds`);
+        const timeLeft = Math.round((new Date(data.expires_at) - new Date()) / 1000);
+        toast.warning(`Message expires in ${timeLeft} seconds`, { duration: 3000 });
         break;
       case 'message_expired':
         // Remove expired message from UI
         setMessages(prev => prev.filter(msg => msg.id !== data.message_id));
+        toast.info('Message expired and deleted');
         break;
       case 'user_status':
         setOnlineUsers(prev => {
@@ -176,20 +190,10 @@ function App() {
           return newSet;
         });
         break;
-      case 'channel_settings_updated':
-        toast.success(`Channel settings updated by ${data.updated_by}`);
-        loadChannels(); // Refresh channel data
-        break;
-      case 'player_stats_updated':
-        toast.success(`Player stats updated for ${data.player_name}`);
-        if (selectedChannel?.id === data.channel_id) {
-          loadDomainData();
-        }
-        break;
       default:
         break;
     }
-  }, [selectedChannel, loadChannels, loadDomainData]);
+  }, []);
 
   // Load initial data
   useEffect(() => {
@@ -198,9 +202,9 @@ function App() {
       loadUsers();
       getCurrentUser();
     }
-  }, [token, loadChannels, loadUsers, getCurrentUser]);
+  }, [token]);
 
-  const getCurrentUser = useCallback(async () => {
+  const getCurrentUser = async () => {
     try {
       const response = await axios.get(`${API_URL}/api/auth/me`);
       setUser(response.data);
@@ -208,9 +212,9 @@ function App() {
       console.error('Failed to get current user:', error);
       handleLogout();
     }
-  }, [handleLogout]);
+  };
 
-  const loadChannels = useCallback(async () => {
+  const loadChannels = async () => {
     try {
       const response = await axios.get(`${API_URL}/api/channels`);
       setChannels(response.data);
@@ -220,55 +224,24 @@ function App() {
     } catch (error) {
       toast.error('Failed to load channels');
     }
-  }, [selectedChannel]);
+  };
 
-  const loadUsers = useCallback(async () => {
+  const loadUsers = async () => {
     try {
       const response = await axios.get(`${API_URL}/api/users`);
       setUsers(response.data);
     } catch (error) {
       toast.error('Failed to load users');
     }
-  }, []);
+  };
 
-  // Load domain-specific data when channel changes
-  const loadDomainData = useCallback(async () => {
-    if (!selectedChannel) return;
-    
-    try {
-      const domain = selectedChannel.domain_type;
-      
-      if (domain === 'sports') {
-        const [statsResponse, scheduleResponse] = await Promise.all([
-          axios.get(`${API_URL}/api/sports/stats/${selectedChannel.id}`),
-          axios.get(`${API_URL}/api/sports/schedule/${selectedChannel.id}`)
-        ]);
-        setPlayerStats(statsResponse.data);
-        setGameSchedule(scheduleResponse.data);
-      } else if (domain === 'study') {
-        const [flashcardsResponse, materialsResponse] = await Promise.all([
-          axios.get(`${API_URL}/api/study/flashcards/${selectedChannel.id}`),
-          axios.get(`${API_URL}/api/study/materials/${selectedChannel.id}`)
-        ]);
-        setFlashcards(flashcardsResponse.data);
-        setStudyMaterials(materialsResponse.data);
-      } else if (domain === 'agile') {
-        const sprintResponse = await axios.get(`${API_URL}/api/agile/sprint/${selectedChannel.id}`);
-        setActiveSprint(sprintResponse.data);
-      }
-    } catch (error) {
-      console.error('Failed to load domain data:', error);
-    }
-  }, [selectedChannel]);
-
-  // Load domain data when channel selection changes
+  // Load messages when channel/user selection changes
   useEffect(() => {
     if (selectedChannel) {
       loadChannelMessages(selectedChannel.id);
-      loadDomainData();
       setSelectedUser(null);
     }
-  }, [selectedChannel, loadDomainData]);
+  }, [selectedChannel]);
 
   useEffect(() => {
     if (selectedUser) {
@@ -310,20 +283,17 @@ function App() {
         is_public: true,
         ttl_enabled: newChannelTTL,
         ttl_seconds: newChannelTTLSeconds,
-        domain_type: newChannelDomain,
+        domain_type: "general",
         domain_config: {}
       });
       
       setNewChannelName('');
       setNewChannelDescription('');
-      setNewChannelDomain('general');
       setNewChannelTTL(false);
       setNewChannelTTLSeconds(3600);
       setShowNewChannelDialog(false);
       loadChannels();
-      
-      const domainLabel = domainTypes.find(d => d.value === newChannelDomain)?.label || 'General';
-      toast.success(`${domainLabel} channel created successfully!`);
+      toast.success('Channel created successfully!');
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to create channel');
     }
@@ -421,6 +391,20 @@ function App() {
     if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
     if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
     return date.toLocaleDateString();
+  };
+
+  const formatExpirationTime = (expiresAt) => {
+    const now = new Date();
+    const expiry = new Date(expiresAt);
+    const diff = expiry - now;
+    
+    if (diff <= 0) return 'Expired';
+    
+    const minutes = Math.floor(diff / 60000);
+    const seconds = Math.floor((diff % 60000) / 1000);
+    
+    if (minutes > 0) return `${minutes}m ${seconds}s remaining`;
+    return `${seconds}s remaining`;
   };
 
   // Auth UI
@@ -525,7 +509,6 @@ function App() {
               </SheetTitle>
             </SheetHeader>
             <div className="flex-1 overflow-hidden">
-              {/* Mobile sidebar content */}
               <SidebarContent 
                 channels={channels}
                 users={users}
@@ -538,7 +521,6 @@ function App() {
                 onCreateChannel={() => setShowNewChannelDialog(true)}
                 onJoinChannel={handleJoinChannel}
                 onLogout={handleLogout}
-                domainTypes={domainTypes}
               />
             </div>
           </div>
@@ -559,7 +541,6 @@ function App() {
           onCreateChannel={() => setShowNewChannelDialog(true)}
           onJoinChannel={handleJoinChannel}
           onLogout={handleLogout}
-          domainTypes={domainTypes}
         />
       </div>
 
@@ -577,6 +558,12 @@ function App() {
                 <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200">
                   {selectedChannel.members?.length || 0} members
                 </Badge>
+                {selectedChannel.ttl_enabled && (
+                  <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-200 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    Ephemeral
+                  </Badge>
+                )}
               </>
             )}
             {selectedUser && (
@@ -623,6 +610,7 @@ function App() {
                 onAddReaction={handleAddReaction}
                 popularEmojis={popularEmojis}
                 formatTimestamp={formatTimestamp}
+                formatExpirationTime={formatExpirationTime}
               />
             ))}
           </div>
@@ -659,7 +647,7 @@ function App() {
                     ? `Message ${selectedUser.username}` 
                     : "Select a channel or user to start messaging"
               }
-              className="flex-1 border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="flex-1 border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
               disabled={!selectedChannel && !selectedUser}
             />
             <Button 
@@ -685,7 +673,7 @@ function App() {
             <div>
               <label className="text-sm font-medium text-gray-700 mb-2 block">Channel Name</label>
               <Input
-                placeholder="e.g., general, team-alpha, study-group"
+                placeholder="e.g., general, team-alpha, announcements"
                 value={newChannelName}
                 onChange={(e) => setNewChannelName(e.target.value)}
                 className="border-gray-300 focus:ring-2 focus:ring-blue-500"
@@ -701,27 +689,6 @@ function App() {
                 onChange={(e) => setNewChannelDescription(e.target.value)}
                 className="border-gray-300 focus:ring-2 focus:ring-blue-500 h-20"
               />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-3 block">Channel Type</label>
-              <div className="grid grid-cols-2 gap-3">
-                {domainTypes.map((domain) => (
-                  <button
-                    key={domain.value}
-                    type="button"
-                    onClick={() => setNewChannelDomain(domain.value)}
-                    className={`p-3 rounded-lg border-2 transition-all text-left ${
-                      newChannelDomain === domain.value
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="text-lg mb-1">{domain.icon}</div>
-                    <div className="text-sm font-medium">{domain.label}</div>
-                  </button>
-                ))}
-              </div>
             </div>
 
             <div className="space-y-3">
@@ -775,9 +742,6 @@ function App() {
           </form>
         </DialogContent>
       </Dialog>
-      
-      {/* Toaster for notifications */}
-      <Toaster position="top-right" richColors />
     </div>
   );
 }
@@ -794,8 +758,7 @@ function SidebarContent({
   onUserSelect, 
   onCreateChannel, 
   onJoinChannel, 
-  onLogout,
-  domainTypes
+  onLogout 
 }) {
   return (
     <>
@@ -844,54 +807,46 @@ function SidebarContent({
           </div>
           
           <div className="space-y-1">
-            {channels.map((channel) => {
-              const domainIcon = domainTypes.find(d => d.value === channel.domain_type)?.icon || '💬';
-              return (
-                <div
-                  key={channel.id}
-                  onClick={() => onChannelSelect(channel)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 group ${
-                    selectedChannel?.id === channel.id
-                      ? 'bg-blue-600 text-white shadow-lg'
-                      : 'hover:bg-slate-700 text-gray-300 hover:text-white'
-                  }`}
-                >
-                  <div className={`w-6 h-6 rounded flex items-center justify-center text-sm ${
-                    selectedChannel?.id === channel.id ? 'bg-blue-700' : 'bg-slate-600 group-hover:bg-slate-600'
-                  }`}>
-                    {channel.domain_type === 'general' ? <Hash className="w-3 h-3" /> : domainIcon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium truncate">{channel.name}</span>
-                      {channel.ttl_enabled && (
-                        <div className="text-xs bg-amber-500 text-white px-1.5 py-0.5 rounded-full">
-                          ⏱️
-                        </div>
-                      )}
-                    </div>
-                    {channel.domain_type !== 'general' && (
-                      <div className="text-xs text-gray-400 capitalize">
-                        {channel.domain_type}
+            {channels.map((channel) => (
+              <div
+                key={channel.id}
+                onClick={() => onChannelSelect(channel)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 group ${
+                  selectedChannel?.id === channel.id
+                    ? 'bg-blue-600 text-white shadow-lg'
+                    : 'hover:bg-slate-700 text-gray-300 hover:text-white'
+                }`}
+              >
+                <div className={`w-5 h-5 rounded flex items-center justify-center ${
+                  selectedChannel?.id === channel.id ? 'bg-blue-700' : 'bg-slate-600 group-hover:bg-slate-600'
+                }`}>
+                  <Hash className="w-3 h-3" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium truncate">{channel.name}</span>
+                    {channel.ttl_enabled && (
+                      <div className="text-xs bg-amber-500 text-white px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                        <Clock className="w-2 h-2" />
                       </div>
                     )}
                   </div>
-                  {!channel.members?.includes(user.id) && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onJoinChannel(channel.id);
-                      }}
-                      className="text-xs px-2 py-1 h-6 bg-slate-600 hover:bg-slate-500 text-white ml-auto"
-                    >
-                      Join
-                    </Button>
-                  )}
                 </div>
-              );
-            })}
+                {!channel.members?.includes(user.id) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onJoinChannel(channel.id);
+                    }}
+                    className="text-xs px-2 py-1 h-6 bg-slate-600 hover:bg-slate-500 text-white ml-auto"
+                  >
+                    Join
+                  </Button>
+                )}
+              </div>
+            ))}
           </div>
         </div>
 
@@ -958,7 +913,8 @@ function MessageItem({
   onShowEmojiPicker,
   onAddReaction,
   popularEmojis,
-  formatTimestamp 
+  formatTimestamp,
+  formatExpirationTime
 }) {
   const isOwn = message.sender_id === currentUser.id;
   const isEditing = editingMessage === message.id;
@@ -988,12 +944,8 @@ function MessageItem({
           )}
           {message.is_ephemeral && (
             <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded-full font-medium flex items-center gap-1">
-              ⏱️ ephemeral
-            </span>
-          )}
-          {message.message_type === 'system' && (
-            <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full font-medium">
-              system
+              <Clock className="w-2 h-2" />
+              ephemeral
             </span>
           )}
         </div>
@@ -1003,7 +955,7 @@ function MessageItem({
             <Textarea
               value={editContent}
               onChange={(e) => onEditContentChange(e.target.value)}
-              className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
             />
             <div className="flex gap-2">
               <Button size="sm" onClick={() => onSaveEdit(message.id)} className="bg-green-600 hover:bg-green-700">
@@ -1019,20 +971,17 @@ function MessageItem({
         ) : (
           <>
             <div className={`inline-block max-w-full px-4 py-3 rounded-2xl shadow-sm ${
-              message.message_type === 'system' 
-                ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 text-blue-900'
-                : isOwn 
-                  ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white' 
-                  : 'bg-white border border-gray-200 text-gray-900'
+              isOwn 
+                ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white' 
+                : 'bg-white border border-gray-200 text-gray-900'
             }`}>
-              <p className="text-sm leading-relaxed">
-                {message.content}
-                {message.expires_at && (
-                  <span className="block text-xs mt-1 opacity-75">
-                    Expires: {new Date(message.expires_at).toLocaleString()}
-                  </span>
-                )}
-              </p>
+              <p className="text-sm leading-relaxed">{message.content}</p>
+              {message.is_ephemeral && message.expires_at && (
+                <div className="text-xs mt-2 opacity-75 flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  {formatExpirationTime(message.expires_at)}
+                </div>
+              )}
             </div>
             
             {/* Reactions */}
