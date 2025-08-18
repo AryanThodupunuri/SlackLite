@@ -128,7 +128,7 @@ function App() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
@@ -136,7 +136,7 @@ function App() {
       ws.close();
     }
     toast.success('Logged out successfully');
-  };
+  }, [ws]);
 
   // WebSocket connection
   useEffect(() => {
