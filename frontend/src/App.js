@@ -697,29 +697,104 @@ function App() {
         </div>
       </div>
 
-      {/* Create Channel Dialog */}
+      {/* Enhanced Create Channel Dialog */}
       <Dialog open={showNewChannelDialog} onOpenChange={setShowNewChannelDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Create New Channel</DialogTitle>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              ✨ Create New Channel
+            </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleCreateChannel} className="space-y-4">
-            <Input
-              placeholder="Channel name"
-              value={newChannelName}
-              onChange={(e) => setNewChannelName(e.target.value)}
-              required
-            />
-            <Textarea
-              placeholder="Channel description (optional)"
-              value={newChannelDescription}
-              onChange={(e) => setNewChannelDescription(e.target.value)}
-            />
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setShowNewChannelDialog(false)}>
+          <form onSubmit={handleCreateChannel} className="space-y-6">
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Channel Name</label>
+              <Input
+                placeholder="e.g., general, team-alpha, study-group"
+                value={newChannelName}
+                onChange={(e) => setNewChannelName(e.target.value)}
+                className="border-gray-300 focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Description</label>
+              <Textarea
+                placeholder="What's this channel for?"
+                value={newChannelDescription}
+                onChange={(e) => setNewChannelDescription(e.target.value)}
+                className="border-gray-300 focus:ring-2 focus:ring-blue-500 h-20"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-3 block">Channel Type</label>
+              <div className="grid grid-cols-2 gap-3">
+                {domainTypes.map((domain) => (
+                  <button
+                    key={domain.value}
+                    type="button"
+                    onClick={() => setNewChannelDomain(domain.value)}
+                    className={`p-3 rounded-lg border-2 transition-all text-left ${
+                      newChannelDomain === domain.value
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="text-lg mb-1">{domain.icon}</div>
+                    <div className="text-sm font-medium">{domain.label}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Ephemeral Messages</label>
+                  <p className="text-xs text-gray-500">Messages auto-delete after specified time</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={newChannelTTL}
+                  onChange={(e) => setNewChannelTTL(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                />
+              </div>
+              
+              {newChannelTTL && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">Auto-delete after</label>
+                  <select
+                    value={newChannelTTLSeconds}
+                    onChange={(e) => setNewChannelTTLSeconds(parseInt(e.target.value))}
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    {ttlOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setShowNewChannelDialog(false)}
+                className="px-6"
+              >
                 Cancel
               </Button>
-              <Button type="submit">Create Channel</Button>
+              <Button 
+                type="submit" 
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6"
+              >
+                Create Channel
+              </Button>
             </div>
           </form>
         </DialogContent>
