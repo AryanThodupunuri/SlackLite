@@ -266,6 +266,64 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
+# Ephemeral messaging helper functions
+async def setup_message_ttl():
+    """Setup TTL index for ephemeral messages"""
+    try:
+        # Create TTL index on expires_at field
+        await db.messages.create_index("expires_at", expireAfterSeconds=0)
+        print("✅ TTL index created for ephemeral messages")
+    except Exception as e:
+        print(f"⚠️ TTL index setup warning: {e}")
+
+async def calculate_expiry_time(channel_id: str) -> Optional[datetime]:
+    """Calculate message expiry time based on channel settings"""
+    channel = await db.channels.find_one({"id": channel_id})
+    if channel and channel.get("ttl_enabled", False):
+        ttl_seconds = channel.get("ttl_seconds", 3600)
+        return datetime.utcnow() + timedelta(seconds=ttl_seconds)
+    return None
+
+async def cleanup_expired_messages():
+    """Background job to clean up expired messages and notify clients"""
+    while True:
+        try:
+            # Find messages that are about to expire (within 10 seconds)
+            expiring_soon = await db.messages.find({
+                "expires_at": {
+                    "$gte": datetime.utcnow(),
+                    "$lte": datetime.utcnow() + timedelta(seconds=10)
+                },
+                "is_ephemeral": True
+            }).to_list(length=None)
+            
+            # Notify clients about expiring messages
+            for message in expiring_soon:
+                expiry_notification = {
+                    "type": "message_expiring",
+                    "message_id": message["id"],
+                    "channel_id": message.get("channel_id"),
+                    "expires_at": message["expires_at"].isoformat()
+                }
+                
+                if message.get("channel_id"):
+                    await manager.broadcast_to_channel(expiry_notification, message["channel_id"])
+                elif message.get("recipient_id"):
+                    await manager.send_personal_message(expiry_notification, message["recipient_id"])
+                    await manager.send_personal_message(expiry_notification, message["sender_id"])
+            
+            await asyncio.sleep(30)  # Check every 30 seconds
+        except Exception as e:
+            print(f"❌ Cleanup job error: {e}")
+            await asyncio.sleep(60)  # Wait longer on error
+
+# Start background cleanup task
+@app.on_event("startup")
+async def startup_event():
+    await setup_message_ttl()
+    # Start background cleanup task
+    asyncio.create_task(cleanup_expired_messages())
+
 # Authentication helpers
 def hash_password(password: str) -> str:
     salt = bcrypt.gensalt()
