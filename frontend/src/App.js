@@ -183,6 +183,14 @@ function App() {
           msg.id === data.message_id ? { ...msg, reactions: data.reactions } : msg
         ));
         break;
+      case 'message_expiring':
+        // Show expiration warning
+        toast.warning(`Message expiring in ${Math.round((new Date(data.expires_at) - new Date()) / 1000)} seconds`);
+        break;
+      case 'message_expired':
+        // Remove expired message from UI
+        setMessages(prev => prev.filter(msg => msg.id !== data.message_id));
+        break;
       case 'user_status':
         setOnlineUsers(prev => {
           const newSet = new Set(prev);
@@ -194,10 +202,20 @@ function App() {
           return newSet;
         });
         break;
+      case 'channel_settings_updated':
+        toast.success(`Channel settings updated by ${data.updated_by}`);
+        loadChannels(); // Refresh channel data
+        break;
+      case 'player_stats_updated':
+        toast.success(`Player stats updated for ${data.player_name}`);
+        if (selectedChannel?.id === data.channel_id) {
+          loadDomainData();
+        }
+        break;
       default:
         break;
     }
-  }, []);
+  }, [selectedChannel]);
 
   // Load initial data
   useEffect(() => {
