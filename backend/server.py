@@ -87,6 +87,10 @@ class ChannelCreate(BaseModel):
     name: str
     description: Optional[str] = None
     is_public: bool = True
+    ttl_enabled: bool = False
+    ttl_seconds: int = 3600
+    domain_type: str = "general"
+    domain_config: Dict[str, Any] = {}
 
 class Message(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
