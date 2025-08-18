@@ -439,19 +439,21 @@ function App() {
 
   // Main App UI
   return (
-    <div className="h-screen flex bg-gray-50">
+    <div className="h-screen flex bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Mobile Menu */}
       <Sheet>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="md:hidden fixed top-4 left-4 z-50">
+          <Button variant="ghost" size="icon" className="md:hidden fixed top-4 left-4 z-50 text-white hover:bg-white/10">
             <Menu className="w-5 h-5" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-80 p-0">
+        <SheetContent side="left" className="w-80 p-0 bg-slate-800 border-slate-700">
           <div className="flex flex-col h-full">
-            <SheetHeader className="p-6 border-b">
-              <SheetTitle className="flex items-center gap-2">
-                <MessageSquare className="w-6 h-6 text-indigo-600" />
+            <SheetHeader className="p-6 border-b border-slate-700">
+              <SheetTitle className="flex items-center gap-2 text-white">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                  <MessageSquare className="w-5 h-5 text-white" />
+                </div>
                 SlackLite
               </SheetTitle>
             </SheetHeader>
@@ -476,7 +478,7 @@ function App() {
       </Sheet>
 
       {/* Desktop Sidebar */}
-      <div className="hidden md:flex w-80 bg-white border-r border-gray-200 flex-col">
+      <div className="hidden md:flex w-80 bg-gradient-to-b from-slate-800 to-slate-900 border-r border-slate-700 flex-col shadow-2xl">
         <SidebarContent 
           channels={channels}
           users={users}
@@ -493,31 +495,42 @@ function App() {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col bg-white">
         {/* Chat Header */}
-        <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
+        <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm">
           <div className="flex items-center gap-3">
             {selectedChannel && (
               <>
-                <Hash className="w-5 h-5 text-gray-500" />
-                <h1 className="text-xl font-semibold">{selectedChannel.name}</h1>
-                <Badge variant="secondary">{selectedChannel.members?.length || 0} members</Badge>
+                <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center">
+                  <Hash className="w-4 h-4 text-blue-600" />
+                </div>
+                <h1 className="text-xl font-bold text-gray-900">{selectedChannel.name}</h1>
+                <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200">
+                  {selectedChannel.members?.length || 0} members
+                </Badge>
               </>
             )}
             {selectedUser && (
               <>
-                <Avatar className="w-8 h-8">
-                  <AvatarFallback>{selectedUser.username[0].toUpperCase()}</AvatarFallback>
+                <Avatar className="w-8 h-8 ring-2 ring-blue-200">
+                  <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold">
+                    {selectedUser.username[0].toUpperCase()}
+                  </AvatarFallback>
                 </Avatar>
-                <h1 className="text-xl font-semibold">{selectedUser.username}</h1>
-                {onlineUsers.has(selectedUser.id) && <Badge className="bg-green-500">Online</Badge>}
+                <h1 className="text-xl font-bold text-gray-900">{selectedUser.username}</h1>
+                {onlineUsers.has(selectedUser.id) && 
+                  <Badge className="bg-green-100 text-green-700 hover:bg-green-200">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
+                    Online
+                  </Badge>
+                }
               </>
             )}
           </div>
         </div>
 
         {/* Messages */}
-        <ScrollArea className="flex-1 p-6">
+        <ScrollArea className="flex-1 p-6 bg-gray-50">
           <div className="space-y-4">
             {messages.map((message) => (
               <MessageItem
@@ -556,6 +569,7 @@ function App() {
               size="icon"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
+              className="hover:bg-gray-100 text-gray-600"
             >
               <Paperclip className="w-5 h-5" />
             </Button>
@@ -576,10 +590,14 @@ function App() {
                     ? `Message ${selectedUser.username}` 
                     : "Select a channel or user to start messaging"
               }
-              className="flex-1"
+              className="flex-1 border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={!selectedChannel && !selectedUser}
             />
-            <Button type="submit" disabled={!newMessage.trim() || (!selectedChannel && !selectedUser)}>
+            <Button 
+              type="submit" 
+              disabled={!newMessage.trim() || (!selectedChannel && !selectedUser)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6"
+            >
               <Send className="w-4 h-4" />
             </Button>
           </form>
