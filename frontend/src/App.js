@@ -10,7 +10,7 @@ import { ScrollArea } from './components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './components/ui/sheet';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './components/ui/dialog';
 import { Textarea } from './components/ui/textarea';
-import { toast } from 'sonner';
+import { toast, Toaster } from 'sonner';
 import { 
   Send, 
   Plus, 
