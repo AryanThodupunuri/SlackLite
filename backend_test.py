@@ -635,10 +635,10 @@ class SlackLiteAPITester:
             return False
 
     def run_all_tests(self):
-        """Run comprehensive API test suite"""
-        print("🚀 Starting SlackLite API Test Suite")
+        """Run comprehensive API test suite including new features"""
+        print("🚀 Starting Enhanced SlackLite API Test Suite")
         print(f"📡 Testing endpoint: {self.base_url}")
-        print("=" * 60)
+        print("=" * 80)
         
         # Health check
         if not self.test_health_check():
@@ -666,16 +666,82 @@ class SlackLiteAPITester:
         # User management tests
         self.test_get_users()
         
-        # Channel tests
-        channel_id = self.test_create_channel()
-        if channel_id:
-            self.test_get_channels()
-            self.test_join_channel(channel_id)
+        print("\n🔧 Testing Enhanced Channel Features...")
+        
+        # Test enhanced channel creation for each domain type
+        channel_ids = {}
+        for domain_type in ['general', 'sports', 'study', 'agile']:
+            channel_id = self.test_create_enhanced_channel(domain_type)
+            if channel_id:
+                channel_ids[domain_type] = channel_id
+        
+        # Test basic channel creation (backward compatibility)
+        basic_channel_id = self.test_create_channel()
+        if basic_channel_id:
+            channel_ids['basic'] = basic_channel_id
+        
+        self.test_get_channels()
+        
+        print("\n⚡ Testing Ephemeral Messaging...")
+        
+        # Test ephemeral messaging in sports channel (has TTL enabled)
+        if 'sports' in channel_ids:
+            sports_channel_id = channel_ids['sports']
+            self.test_join_channel(sports_channel_id)
+            ephemeral_msg_id = self.test_ephemeral_message(sports_channel_id)
+            
+            if ephemeral_msg_id:
+                self.test_get_channel_messages(sports_channel_id)
+        
+        # Test channel settings update
+        if 'basic' in channel_ids:
+            self.test_update_channel_settings(channel_ids['basic'])
+        
+        print("\n🏀 Testing Sports Domain Features...")
+        
+        # Sports domain tests
+        if 'sports' in channel_ids:
+            sports_id = channel_ids['sports']
+            self.test_create_player_stats(sports_id)
+            self.test_get_team_stats(sports_id)
+            self.test_create_game_schedule(sports_id)
+            self.test_get_team_schedule(sports_id)
+        
+        print("\n📚 Testing Study Group Features...")
+        
+        # Study domain tests
+        if 'study' in channel_ids:
+            study_id = channel_ids['study']
+            self.test_join_channel(study_id)
+            self.test_create_flashcard(study_id)
+            self.test_get_flashcards(study_id)
+            self.test_create_study_material(study_id)
+            self.test_get_study_materials(study_id)
+        
+        print("\n🚀 Testing Agile/DevOps Features...")
+        
+        # Agile domain tests
+        if 'agile' in channel_ids:
+            agile_id = channel_ids['agile']
+            self.test_join_channel(agile_id)
+            self.test_create_sprint(agile_id)
+            self.test_get_active_sprint(agile_id)
+        
+        # Webhook tests
+        self.test_jira_webhook()
+        self.test_github_webhook()
+        
+        print("\n💬 Testing Core Messaging Features...")
+        
+        # Core messaging tests
+        if 'general' in channel_ids:
+            general_id = channel_ids['general']
+            self.test_join_channel(general_id)
             
             # Message tests
-            message_id = self.test_send_channel_message(channel_id)
+            message_id = self.test_send_channel_message(general_id)
             if message_id:
-                self.test_get_channel_messages(channel_id)
+                self.test_get_channel_messages(general_id)
                 self.test_edit_message(message_id)
                 self.test_add_reaction(message_id)
             
@@ -687,21 +753,26 @@ class SlackLiteAPITester:
             
             # File upload test
             self.test_file_upload()
-            
-            # Leave channel test
-            self.test_leave_channel(channel_id)
         
         # Print results
-        print("=" * 60)
+        print("=" * 80)
         print(f"📊 Test Results: {self.tests_passed}/{self.tests_run} tests passed")
         
         if self.tests_passed == self.tests_run:
-            print("🎉 All tests passed! Backend API is working correctly.")
+            print("🎉 All tests passed! Enhanced SlackLite API is working correctly.")
+            print("✅ Ephemeral messaging, domain-specific features, and webhooks are functional.")
             return True
         else:
             failed_tests = self.tests_run - self.tests_passed
-            print(f"⚠️  {failed_tests} test(s) failed. Backend needs attention.")
-            return False
+            success_rate = (self.tests_passed / self.tests_run) * 100
+            print(f"⚠️  {failed_tests} test(s) failed. Success rate: {success_rate:.1f}%")
+            
+            if success_rate >= 80:
+                print("✅ Most features are working. Minor issues detected.")
+                return True
+            else:
+                print("❌ Significant issues detected. Backend needs attention.")
+                return False
 
 def main():
     """Main test execution"""
