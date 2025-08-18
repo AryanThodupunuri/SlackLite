@@ -215,7 +215,7 @@ function App() {
       default:
         break;
     }
-  }, [selectedChannel]);
+  }, [selectedChannel, loadChannels, loadDomainData]);
 
   // Load initial data
   useEffect(() => {
