@@ -368,30 +368,31 @@ function App() {
   // Auth UI
   if (!token || !user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
-          <CardHeader className="text-center pb-2">
-            <div className="w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl mx-auto mb-4 flex items-center justify-center">
-              <MessageSquare className="w-8 h-8 text-white" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-purple-900 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
+          <CardHeader className="text-center pb-6">
+            <div className="w-20 h-20 bg-gradient-to-r from-blue-600 to-purple-600 rounded-3xl mx-auto mb-6 flex items-center justify-center shadow-lg">
+              <MessageSquare className="w-10 h-10 text-white" />
             </div>
-            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            <CardTitle className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               SlackLite
             </CardTitle>
-            <p className="text-gray-600">Real-time messaging made simple</p>
+            <p className="text-gray-600 font-medium">Real-time messaging made simple</p>
           </CardHeader>
           <CardContent>
             <Tabs value={isLogin ? 'login' : 'register'} onValueChange={(v) => setIsLogin(v === 'login')}>
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="register">Sign Up</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 mb-6 bg-gray-100">
+                <TabsTrigger value="login" className="font-semibold">Login</TabsTrigger>
+                <TabsTrigger value="register" className="font-semibold">Sign Up</TabsTrigger>
               </TabsList>
               
               <TabsContent value="login">
-                <form onSubmit={handleLogin} className="space-y-4">
+                <form onSubmit={handleLogin} className="space-y-5">
                   <Input
                     placeholder="Username"
                     value={loginForm.username}
                     onChange={(e) => setLoginForm({...loginForm, username: e.target.value})}
+                    className="border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-12"
                     required
                   />
                   <Input
@@ -399,18 +400,22 @@ function App() {
                     placeholder="Password"
                     value={loginForm.password}
                     onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
+                    className="border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-12"
                     required
                   />
-                  <Button type="submit" className="w-full">Login</Button>
+                  <Button type="submit" className="w-full h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold text-lg">
+                    Sign In
+                  </Button>
                 </form>
               </TabsContent>
               
               <TabsContent value="register">
-                <form onSubmit={handleRegister} className="space-y-4">
+                <form onSubmit={handleRegister} className="space-y-5">
                   <Input
                     placeholder="Username"
                     value={registerForm.username}
                     onChange={(e) => setRegisterForm({...registerForm, username: e.target.value})}
+                    className="border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-12"
                     required
                   />
                   <Input
@@ -418,6 +423,7 @@ function App() {
                     placeholder="Email"
                     value={registerForm.email}
                     onChange={(e) => setRegisterForm({...registerForm, email: e.target.value})}
+                    className="border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-12"
                     required
                   />
                   <Input
@@ -425,9 +431,12 @@ function App() {
                     placeholder="Password"
                     value={registerForm.password}
                     onChange={(e) => setRegisterForm({...registerForm, password: e.target.value})}
+                    className="border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-12"
                     required
                   />
-                  <Button type="submit" className="w-full">Create Account</Button>
+                  <Button type="submit" className="w-full h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold text-lg">
+                    Create Account
+                  </Button>
                 </form>
               </TabsContent>
             </Tabs>
