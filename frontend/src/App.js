@@ -799,31 +799,43 @@ function MessageItem({
   const isEditing = editingMessage === message.id;
 
   return (
-    <div className={`flex gap-3 group ${isOwn ? 'flex-row-reverse' : ''}`}>
-      <Avatar className="w-8 h-8 flex-shrink-0">
-        <AvatarFallback>{message.sender_username[0].toUpperCase()}</AvatarFallback>
+    <div className={`flex gap-4 group hover:bg-gray-50 p-3 rounded-lg transition-colors ${isOwn ? 'flex-row-reverse' : ''}`}>
+      <Avatar className="w-10 h-10 flex-shrink-0 ring-2 ring-gray-100">
+        <AvatarFallback className={`font-bold text-white ${
+          isOwn 
+            ? 'bg-gradient-to-r from-blue-600 to-blue-700' 
+            : 'bg-gradient-to-r from-emerald-500 to-teal-600'
+        }`}>
+          {message.sender_username[0].toUpperCase()}
+        </AvatarFallback>
       </Avatar>
       
-      <div className={`flex-1 ${isOwn ? 'text-right' : ''}`}>
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-sm font-medium">{message.sender_username}</span>
-          <span className="text-xs text-gray-500">{formatTimestamp(message.created_at)}</span>
-          {message.edited_at && <span className="text-xs text-gray-400">(edited)</span>}
+      <div className={`flex-1 max-w-2xl ${isOwn ? 'text-right' : ''}`}>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-sm font-bold text-gray-900">{message.sender_username}</span>
+          <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+            {formatTimestamp(message.created_at)}
+          </span>
+          {message.edited_at && (
+            <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full font-medium">
+              edited
+            </span>
+          )}
         </div>
         
         {isEditing ? (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Textarea
               value={editContent}
               onChange={(e) => onEditContentChange(e.target.value)}
-              className="w-full"
+              className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
             <div className="flex gap-2">
-              <Button size="sm" onClick={() => onSaveEdit(message.id)}>
+              <Button size="sm" onClick={() => onSaveEdit(message.id)} className="bg-green-600 hover:bg-green-700">
                 <Check className="w-3 h-3 mr-1" />
                 Save
               </Button>
-              <Button size="sm" variant="outline" onClick={onCancelEdit}>
+              <Button size="sm" variant="outline" onClick={onCancelEdit} className="border-gray-300 hover:bg-gray-50">
                 <X className="w-3 h-3 mr-1" />
                 Cancel
               </Button>
@@ -831,67 +843,67 @@ function MessageItem({
           </div>
         ) : (
           <>
-            <div className={`inline-block max-w-md px-4 py-2 rounded-2xl ${
+            <div className={`inline-block max-w-full px-4 py-3 rounded-2xl shadow-sm ${
               isOwn 
-                ? 'bg-indigo-600 text-white' 
-                : 'bg-gray-100 text-gray-900'
+                ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white' 
+                : 'bg-white border border-gray-200 text-gray-900'
             }`}>
-              <p className="text-sm">{message.content}</p>
+              <p className="text-sm leading-relaxed">{message.content}</p>
             </div>
             
             {/* Reactions */}
             {message.reactions && Object.keys(message.reactions).length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
+              <div className="flex flex-wrap gap-2 mt-3">
                 {Object.entries(message.reactions).map(([emoji, userIds]) => (
                   <button
                     key={emoji}
                     onClick={() => onAddReaction(message.id, emoji)}
-                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
+                    className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium transition-all shadow-sm ${
                       userIds.includes(currentUser.id)
-                        ? 'bg-indigo-100 text-indigo-700'
-                        : 'bg-gray-100 hover:bg-gray-200'
+                        ? 'bg-blue-100 text-blue-700 border border-blue-200 hover:bg-blue-200'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200'
                     }`}
                   >
-                    <span>{emoji}</span>
-                    <span>{userIds.length}</span>
+                    <span className="text-base">{emoji}</span>
+                    <span className="font-bold">{userIds.length}</span>
                   </button>
                 ))}
               </div>
             )}
             
             {/* Message Actions */}
-            <div className={`flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity ${
+            <div className={`flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity ${
               isOwn ? 'justify-end' : ''
             }`}>
               <Button
                 variant="ghost"
                 size="icon"
-                className="w-6 h-6"
+                className="w-8 h-8 hover:bg-gray-200"
                 onClick={() => onShowEmojiPicker(showEmojiPicker === message.id ? null : message.id)}
               >
-                <Smile className="w-3 h-3" />
+                <Smile className="w-4 h-4 text-gray-500" />
               </Button>
               
               {isOwn && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="w-6 h-6"
+                  className="w-8 h-8 hover:bg-gray-200"
                   onClick={() => onStartEdit(message)}
                 >
-                  <Edit3 className="w-3 h-3" />
+                  <Edit3 className="w-4 h-4 text-gray-500" />
                 </Button>
               )}
             </div>
             
             {/* Emoji Picker */}
             {showEmojiPicker === message.id && (
-              <div className="flex flex-wrap gap-1 mt-2 p-2 bg-white border border-gray-200 rounded-lg shadow-lg">
+              <div className="flex flex-wrap gap-2 mt-3 p-3 bg-white border border-gray-200 rounded-xl shadow-lg">
                 {popularEmojis.map((emoji) => (
                   <button
                     key={emoji}
                     onClick={() => onAddReaction(message.id, emoji)}
-                    className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded"
+                    className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors text-lg"
                   >
                     {emoji}
                   </button>
