@@ -190,15 +190,40 @@ class SlackLiteAPITester:
             self.log_test("Get Users List", False, response)
             return False
 
-    def test_create_channel(self):
-        """Test channel creation"""
-        success, response = self.make_request('POST', '/api/channels', self.test_channel)
+    def test_create_enhanced_channel(self, channel_type="general"):
+        """Test enhanced channel creation with new features"""
+        channel_data = self.test_channels[channel_type]
+        success, response = self.make_request('POST', '/api/channels', channel_data)
         
         if success and 'id' in response:
-            self.log_test("Create Channel", True)
+            # Verify all new fields are present
+            expected_fields = ['domain_type', 'ttl_enabled', 'ttl_seconds']
+            missing_fields = [field for field in expected_fields if field not in response]
+            
+            if missing_fields:
+                self.log_test(f"Create {channel_type.title()} Channel", False, f"Missing fields: {missing_fields}")
+                return None
+            else:
+                self.log_test(f"Create {channel_type.title()} Channel", True)
+                return response['id']
+        else:
+            self.log_test(f"Create {channel_type.title()} Channel", False, response)
+            return None
+
+    def test_create_channel(self):
+        """Test basic channel creation (backward compatibility)"""
+        basic_channel = {
+            "name": f"basic_test_{int(time.time())}",
+            "description": "Basic test channel",
+            "is_public": True
+        }
+        success, response = self.make_request('POST', '/api/channels', basic_channel)
+        
+        if success and 'id' in response:
+            self.log_test("Create Basic Channel", True)
             return response['id']
         else:
-            self.log_test("Create Channel", False, response)
+            self.log_test("Create Basic Channel", False, response)
             return None
 
     def test_get_channels(self):
