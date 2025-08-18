@@ -1042,11 +1042,20 @@ function MessageItem({
         ) : (
           <>
             <div className={`inline-block max-w-full px-4 py-3 rounded-2xl shadow-sm ${
-              isOwn 
-                ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white' 
-                : 'bg-white border border-gray-200 text-gray-900'
+              message.message_type === 'system' 
+                ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 text-blue-900'
+                : isOwn 
+                  ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white' 
+                  : 'bg-white border border-gray-200 text-gray-900'
             }`}>
-              <p className="text-sm leading-relaxed">{message.content}</p>
+              <p className="text-sm leading-relaxed">
+                {message.content}
+                {message.expires_at && (
+                  <span className="block text-xs mt-1 opacity-75">
+                    Expires: {new Date(message.expires_at).toLocaleString()}
+                  </span>
+                )}
+              </p>
             </div>
             
             {/* Reactions */}
