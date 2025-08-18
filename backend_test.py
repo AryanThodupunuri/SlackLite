@@ -347,15 +347,291 @@ class SlackLiteAPITester:
             self.log_test("File Upload", False, response)
             return None
 
-    def test_leave_channel(self, channel_id):
-        """Test leaving a channel"""
-        success, response = self.make_request('POST', f'/api/channels/{channel_id}/leave')
+    def test_update_channel_settings(self, channel_id):
+        """Test updating channel settings"""
+        settings_data = {
+            "ttl_enabled": True,
+            "ttl_seconds": 1800,  # 30 minutes
+            "domain_type": "general",
+            "domain_config": {"updated": True}
+        }
+        
+        success, response = self.make_request('PUT', f'/api/channels/{channel_id}/settings', settings_data)
         
         if success:
-            self.log_test("Leave Channel", True)
+            self.log_test("Update Channel Settings", True)
             return True
         else:
-            self.log_test("Leave Channel", False, response)
+            self.log_test("Update Channel Settings", False, response)
+            return False
+
+    def test_ephemeral_message(self, channel_id):
+        """Test ephemeral message creation in TTL-enabled channel"""
+        message_data = {
+            "content": f"Ephemeral test message at {datetime.now().isoformat()}",
+            "channel_id": channel_id
+        }
+        
+        success, response = self.make_request('POST', '/api/messages', message_data)
+        
+        if success and 'id' in response:
+            # Check if message has ephemeral properties
+            if response.get('is_ephemeral') and response.get('expires_at'):
+                self.log_test("Send Ephemeral Message", True)
+                return response['id']
+            else:
+                self.log_test("Send Ephemeral Message", False, "Message not marked as ephemeral")
+                return None
+        else:
+            self.log_test("Send Ephemeral Message", False, response)
+            return None
+
+    # Sports Team Domain Tests
+    def test_create_player_stats(self, channel_id):
+        """Test creating player stats for sports channel"""
+        stats_data = {
+            "channel_id": channel_id,
+            "player_name": "Test Player",
+            "games_played": 5,
+            "points": 120,
+            "assists": 25,
+            "rebounds": 30
+        }
+        
+        success, response = self.make_request('POST', '/api/sports/stats', None, None, 200)
+        # Add query parameters manually
+        url = f"{self.base_url}/api/sports/stats"
+        headers = {'Authorization': f'Bearer {self.token}'}
+        
+        try:
+            response = requests.post(url, headers=headers, params=stats_data)
+            success = response.status_code == 200
+            
+            if success:
+                self.log_test("Create Player Stats", True)
+                return True
+            else:
+                self.log_test("Create Player Stats", False, f"Status {response.status_code}: {response.text}")
+                return False
+        except Exception as e:
+            self.log_test("Create Player Stats", False, str(e))
+            return False
+
+    def test_get_team_stats(self, channel_id):
+        """Test getting team stats"""
+        success, response = self.make_request('GET', f'/api/sports/stats/{channel_id}')
+        
+        if success and isinstance(response, list):
+            self.log_test("Get Team Stats", True)
+            return True
+        else:
+            self.log_test("Get Team Stats", False, response)
+            return False
+
+    def test_create_game_schedule(self, channel_id):
+        """Test creating game schedule"""
+        future_date = (datetime.now() + timedelta(days=7)).isoformat()
+        schedule_data = {
+            "channel_id": channel_id,
+            "date": future_date,
+            "opponent": "Test Opponent",
+            "location": "Test Stadium"
+        }
+        
+        url = f"{self.base_url}/api/sports/schedule"
+        headers = {'Authorization': f'Bearer {self.token}'}
+        
+        try:
+            response = requests.post(url, headers=headers, params=schedule_data)
+            success = response.status_code == 200
+            
+            if success:
+                self.log_test("Create Game Schedule", True)
+                return True
+            else:
+                self.log_test("Create Game Schedule", False, f"Status {response.status_code}: {response.text}")
+                return False
+        except Exception as e:
+            self.log_test("Create Game Schedule", False, str(e))
+            return False
+
+    def test_get_team_schedule(self, channel_id):
+        """Test getting team schedule"""
+        success, response = self.make_request('GET', f'/api/sports/schedule/{channel_id}')
+        
+        if success and isinstance(response, list):
+            self.log_test("Get Team Schedule", True)
+            return True
+        else:
+            self.log_test("Get Team Schedule", False, response)
+            return False
+
+    # Study Group Domain Tests
+    def test_create_flashcard(self, channel_id):
+        """Test creating flashcard for study channel"""
+        flashcard_data = {
+            "channel_id": channel_id,
+            "question": "What is the capital of France?",
+            "answer": "Paris",
+            "difficulty": 2,
+            "subject": "Geography",
+            "tags": ["geography", "capitals", "europe"]
+        }
+        
+        url = f"{self.base_url}/api/study/flashcards"
+        headers = {'Authorization': f'Bearer {self.token}'}
+        
+        try:
+            response = requests.post(url, headers=headers, params=flashcard_data)
+            success = response.status_code == 200
+            
+            if success:
+                self.log_test("Create Flashcard", True)
+                return True
+            else:
+                self.log_test("Create Flashcard", False, f"Status {response.status_code}: {response.text}")
+                return False
+        except Exception as e:
+            self.log_test("Create Flashcard", False, str(e))
+            return False
+
+    def test_get_flashcards(self, channel_id):
+        """Test getting flashcards"""
+        success, response = self.make_request('GET', f'/api/study/flashcards/{channel_id}')
+        
+        if success and isinstance(response, list):
+            self.log_test("Get Flashcards", True)
+            return True
+        else:
+            self.log_test("Get Flashcards", False, response)
+            return False
+
+    def test_create_study_material(self, channel_id):
+        """Test creating study material"""
+        material_data = {
+            "channel_id": channel_id,
+            "title": "Test Study Material",
+            "file_url": "/uploads/test_material.pdf",
+            "file_type": "pdf",
+            "subject": "Computer Science",
+            "description": "Test material for API testing"
+        }
+        
+        url = f"{self.base_url}/api/study/materials"
+        headers = {'Authorization': f'Bearer {self.token}'}
+        
+        try:
+            response = requests.post(url, headers=headers, params=material_data)
+            success = response.status_code == 200
+            
+            if success:
+                self.log_test("Create Study Material", True)
+                return True
+            else:
+                self.log_test("Create Study Material", False, f"Status {response.status_code}: {response.text}")
+                return False
+        except Exception as e:
+            self.log_test("Create Study Material", False, str(e))
+            return False
+
+    def test_get_study_materials(self, channel_id):
+        """Test getting study materials"""
+        success, response = self.make_request('GET', f'/api/study/materials/{channel_id}')
+        
+        if success and isinstance(response, list):
+            self.log_test("Get Study Materials", True)
+            return True
+        else:
+            self.log_test("Get Study Materials", False, response)
+            return False
+
+    # Agile/DevOps Domain Tests
+    def test_create_sprint(self, channel_id):
+        """Test creating sprint for agile channel"""
+        start_date = datetime.now().isoformat()
+        end_date = (datetime.now() + timedelta(days=14)).isoformat()
+        
+        sprint_data = {
+            "channel_id": channel_id,
+            "sprint_name": "Test Sprint 1",
+            "start_date": start_date,
+            "end_date": end_date,
+            "story_points_planned": 50
+        }
+        
+        url = f"{self.base_url}/api/agile/sprint"
+        headers = {'Authorization': f'Bearer {self.token}'}
+        
+        try:
+            response = requests.post(url, headers=headers, params=sprint_data)
+            success = response.status_code == 200
+            
+            if success:
+                self.log_test("Create Sprint", True)
+                return True
+            else:
+                self.log_test("Create Sprint", False, f"Status {response.status_code}: {response.text}")
+                return False
+        except Exception as e:
+            self.log_test("Create Sprint", False, str(e))
+            return False
+
+    def test_get_active_sprint(self, channel_id):
+        """Test getting active sprint"""
+        success, response = self.make_request('GET', f'/api/agile/sprint/{channel_id}')
+        
+        # Note: This might return None if no active sprint, which is valid
+        if success:
+            self.log_test("Get Active Sprint", True)
+            return True
+        else:
+            self.log_test("Get Active Sprint", False, response)
+            return False
+
+    def test_jira_webhook(self):
+        """Test Jira webhook endpoint"""
+        webhook_data = {
+            "webhookEvent": "jira:issue_updated",
+            "issue": {
+                "key": "TEST-123",
+                "fields": {
+                    "summary": "Test Issue",
+                    "status": {
+                        "name": "In Progress"
+                    }
+                }
+            }
+        }
+        
+        success, response = self.make_request('POST', '/api/agile/jira-webhook', webhook_data)
+        
+        if success:
+            self.log_test("Jira Webhook", True)
+            return True
+        else:
+            self.log_test("Jira Webhook", False, response)
+            return False
+
+    def test_github_webhook(self):
+        """Test GitHub webhook endpoint"""
+        webhook_data = {
+            "action": "opened",
+            "pull_request": {
+                "number": 123,
+                "title": "Test PR",
+                "user": {
+                    "login": "testuser"
+                }
+            }
+        }
+        
+        success, response = self.make_request('POST', '/api/agile/github-webhook', webhook_data)
+        
+        if success:
+            self.log_test("GitHub Webhook", True)
+            return True
+        else:
+            self.log_test("GitHub Webhook", False, response)
             return False
 
     def run_all_tests(self):
