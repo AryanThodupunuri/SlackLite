@@ -4,7 +4,7 @@ import requests
 import sys
 import json
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 
 class SlackLiteAPITester:
@@ -17,22 +17,57 @@ class SlackLiteAPITester:
         self.tests_passed = 0
         
         # Test data
+        timestamp = int(time.time())
         self.test_user_1 = {
-            "username": f"testuser1_{int(time.time())}",
-            "email": f"test1_{int(time.time())}@example.com",
+            "username": f"testuser1_{timestamp}",
+            "email": f"test1_{timestamp}@example.com",
             "password": "TestPass123!"
         }
         
         self.test_user_2 = {
-            "username": f"testuser2_{int(time.time())}",
-            "email": f"test2_{int(time.time())}@example.com", 
+            "username": f"testuser2_{timestamp}",
+            "email": f"test2_{timestamp}@example.com", 
             "password": "TestPass123!"
         }
         
-        self.test_channel = {
-            "name": f"test_channel_{int(time.time())}",
-            "description": "Test channel for API testing",
-            "is_public": True
+        # Enhanced channel test data with new features
+        self.test_channels = {
+            "general": {
+                "name": f"general_test_{timestamp}",
+                "description": "General test channel",
+                "is_public": True,
+                "ttl_enabled": False,
+                "ttl_seconds": 3600,
+                "domain_type": "general",
+                "domain_config": {}
+            },
+            "sports": {
+                "name": f"sports_test_{timestamp}",
+                "description": "Sports team test channel",
+                "is_public": True,
+                "ttl_enabled": True,
+                "ttl_seconds": 300,  # 5 minutes for testing
+                "domain_type": "sports",
+                "domain_config": {"team_name": "Test Team"}
+            },
+            "study": {
+                "name": f"study_test_{timestamp}",
+                "description": "Study group test channel",
+                "is_public": True,
+                "ttl_enabled": False,
+                "ttl_seconds": 3600,
+                "domain_type": "study",
+                "domain_config": {"subject": "Computer Science"}
+            },
+            "agile": {
+                "name": f"agile_test_{timestamp}",
+                "description": "Agile/DevOps test channel",
+                "is_public": True,
+                "ttl_enabled": True,
+                "ttl_seconds": 900,  # 15 minutes
+                "domain_type": "agile",
+                "domain_config": {"project": "Test Project"}
+            }
         }
 
     def log_test(self, name, success, details=""):
