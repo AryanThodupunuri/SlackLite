@@ -448,14 +448,358 @@ async def join_channel(channel_id: str, current_user: User = Depends(get_current
     
     return {"message": "Joined channel successfully"}
 
-@app.post("/api/channels/{channel_id}/leave")
-async def leave_channel(channel_id: str, current_user: User = Depends(get_current_user)):
-    await db.channels.update_one(
-        {"id": channel_id},
-        {"$pull": {"members": current_user.id}}
+@app.put("/api/channels/{channel_id}/settings")
+async def update_channel_settings(
+    channel_id: str, 
+    ttl_enabled: bool = False,
+    ttl_seconds: int = 3600,
+    domain_type: str = "general",
+    domain_config: Dict[str, Any] = {},
+    current_user: User = Depends(get_current_user)
+):
+    # Check if user is channel creator or admin
+    channel = await db.channels.find_one({"id": channel_id})
+    if not channel or channel["created_by"] != current_user.id:
+        raise HTTPException(status_code=403, detail="Only channel creator can modify settings")
+    
+    update_data = {
+        "ttl_enabled": ttl_enabled,
+        "ttl_seconds": ttl_seconds,
+        "domain_type": domain_type,
+        "domain_config": domain_config
+    }
+    
+    await db.channels.update_one({"id": channel_id}, {"$set": update_data})
+    
+    # Notify channel members about settings change
+    settings_update = {
+        "type": "channel_settings_updated",
+        "channel_id": channel_id,
+        "ttl_enabled": ttl_enabled,
+        "ttl_seconds": ttl_seconds,
+        "domain_type": domain_type,
+        "updated_by": current_user.username
+    }
+    
+    await manager.broadcast_to_channel(settings_update, channel_id)
+    
+    return {"message": "Channel settings updated successfully"}
+
+# Sports Team Endpoints
+@app.post("/api/sports/stats", response_model=PlayerStats)
+async def create_player_stats(
+    channel_id: str,
+    player_name: str,
+    games_played: int = 0,
+    points: int = 0,
+    assists: int = 0,
+    rebounds: int = 0,
+    current_user: User = Depends(get_current_user)
+):
+    # Verify channel is sports type
+    channel = await db.channels.find_one({"id": channel_id, "domain_type": "sports"})
+    if not channel:
+        raise HTTPException(status_code=404, detail="Sports channel not found")
+    
+    stats = PlayerStats(
+        player_id=current_user.id,
+        player_name=player_name,
+        channel_id=channel_id,
+        games_played=games_played,
+        points=points,
+        assists=assists,
+        rebounds=rebounds
     )
     
-    return {"message": "Left channel successfully"}
+    await db.player_stats.insert_one(stats.dict())
+    
+    # Broadcast stats update
+    stats_update = {
+        "type": "player_stats_updated",
+        "channel_id": channel_id,
+        "player_name": player_name,
+        "stats": stats.dict()
+    }
+    await manager.broadcast_to_channel(stats_update, channel_id)
+    
+    return stats
+
+@app.get("/api/sports/stats/{channel_id}")
+async def get_team_stats(channel_id: str, current_user: User = Depends(get_current_user)):
+    stats = await db.player_stats.find({"channel_id": channel_id}).to_list(length=None)
+    return [PlayerStats(**stat) for stat in stats]
+
+@app.post("/api/sports/schedule", response_model=GameSchedule)
+async def create_game_schedule(
+    channel_id: str,
+    date: datetime,
+    opponent: str,
+    location: str,
+    current_user: User = Depends(get_current_user)
+):
+    game = GameSchedule(
+        channel_id=channel_id,
+        date=date,
+        opponent=opponent,
+        location=location
+    )
+    
+    await db.game_schedule.insert_one(game.dict())
+    
+    # Send system message about new game
+    system_message = Message(
+        content=f"🏀 New game scheduled: vs {opponent} on {date.strftime('%Y-%m-%d %H:%M')} at {location}",
+        sender_id="system",
+        sender_username="GameBot",
+        channel_id=channel_id,
+        message_type="system"
+    )
+    
+    await db.messages.insert_one(system_message.dict())
+    
+    game_announcement = system_message.dict()
+    game_announcement["type"] = "new_message"
+    await manager.broadcast_to_channel(game_announcement, channel_id)
+    
+    return game
+
+@app.get("/api/sports/schedule/{channel_id}")
+async def get_team_schedule(channel_id: str, current_user: User = Depends(get_current_user)):
+    games = await db.game_schedule.find({"channel_id": channel_id}).sort("date", 1).to_list(length=None)
+    return [GameSchedule(**game) for game in games]
+
+# Study Group Endpoints
+@app.post("/api/study/flashcards", response_model=Flashcard)
+async def create_flashcard(
+    channel_id: str,
+    question: str,
+    answer: str,
+    difficulty: int = 1,
+    subject: str = "",
+    tags: List[str] = [],
+    current_user: User = Depends(get_current_user)
+):
+    flashcard = Flashcard(
+        channel_id=channel_id,
+        created_by=current_user.id,
+        question=question,
+        answer=answer,
+        difficulty=difficulty,
+        subject=subject,
+        tags=tags
+    )
+    
+    await db.flashcards.insert_one(flashcard.dict())
+    
+    # Send system message about new flashcard
+    system_message = Message(
+        content=f"📚 New flashcard added: {subject} (Difficulty: {difficulty}/5)",
+        sender_id="system",
+        sender_username="StudyBot",
+        channel_id=channel_id,
+        message_type="system"
+    )
+    
+    await db.messages.insert_one(system_message.dict())
+    
+    flashcard_announcement = system_message.dict()
+    flashcard_announcement["type"] = "new_message"
+    await manager.broadcast_to_channel(flashcard_announcement, channel_id)
+    
+    return flashcard
+
+@app.get("/api/study/flashcards/{channel_id}")
+async def get_flashcards(channel_id: str, subject: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    query = {"channel_id": channel_id}
+    if subject:
+        query["subject"] = subject
+    
+    flashcards = await db.flashcards.find(query).to_list(length=None)
+    return [Flashcard(**card) for card in flashcards]
+
+@app.post("/api/study/materials", response_model=StudyMaterial)
+async def upload_study_material(
+    channel_id: str,
+    title: str,
+    file_url: str,
+    file_type: str,
+    subject: str,
+    description: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    material = StudyMaterial(
+        channel_id=channel_id,
+        uploaded_by=current_user.id,
+        title=title,
+        file_url=file_url,
+        file_type=file_type,
+        subject=subject,
+        description=description
+    )
+    
+    await db.study_materials.insert_one(material.dict())
+    
+    # Send system message about new material
+    system_message = Message(
+        content=f"📄 New study material: {title} ({subject})",
+        sender_id="system",
+        sender_username="StudyBot",
+        channel_id=channel_id,
+        message_type="system"
+    )
+    
+    await db.messages.insert_one(system_message.dict())
+    
+    material_announcement = system_message.dict()
+    material_announcement["type"] = "new_message"
+    await manager.broadcast_to_channel(material_announcement, channel_id)
+    
+    return material
+
+@app.get("/api/study/materials/{channel_id}")
+async def get_study_materials(channel_id: str, current_user: User = Depends(get_current_user)):
+    materials = await db.study_materials.find({"channel_id": channel_id}).to_list(length=None)
+    return [StudyMaterial(**material) for material in materials]
+
+# Agile/DevOps Endpoints
+@app.post("/api/agile/jira-webhook")
+async def jira_webhook(request: dict):
+    """Handle Jira webhook notifications"""
+    try:
+        event_type = request.get("webhookEvent")
+        issue = request.get("issue", {})
+        
+        if event_type == "jira:issue_updated":
+            issue_key = issue.get("key")
+            summary = issue.get("fields", {}).get("summary")
+            status = issue.get("fields", {}).get("status", {}).get("name")
+            
+            # Find channels with Jira integration
+            integrations = await db.jira_integrations.find({}).to_list(length=None)
+            
+            for integration in integrations:
+                channel_id = integration["channel_id"]
+                
+                # Send system message about Jira update
+                system_message = Message(
+                    content=f"🔄 Jira Update: {issue_key} - {summary} → Status: {status}",
+                    sender_id="system",
+                    sender_username="JiraBot",
+                    channel_id=channel_id,
+                    message_type="system",
+                    domain_data={
+                        "jira_issue_key": issue_key,
+                        "jira_status": status,
+                        "jira_summary": summary
+                    }
+                )
+                
+                await db.messages.insert_one(system_message.dict())
+                
+                jira_update = system_message.dict()
+                jira_update["type"] = "new_message"
+                await manager.broadcast_to_channel(jira_update, channel_id)
+        
+        return {"status": "processed"}
+    except Exception as e:
+        print(f"❌ Jira webhook error: {e}")
+        return {"status": "error", "message": str(e)}
+
+@app.post("/api/agile/github-webhook")
+async def github_webhook(request: dict):
+    """Handle GitHub webhook notifications"""
+    try:
+        action = request.get("action")
+        
+        if "pull_request" in request:
+            pr = request["pull_request"]
+            pr_number = pr.get("number")
+            title = pr.get("title")
+            user = pr.get("user", {}).get("login")
+            
+            # Find channels with GitHub integration
+            integrations = await db.github_integrations.find({}).to_list(length=None)
+            
+            for integration in integrations:
+                channel_id = integration["channel_id"]
+                repo_name = integration["repo_name"]
+                
+                if action == "opened":
+                    content = f"🔀 New PR #{pr_number} opened by {user}: {title}"
+                elif action == "closed":
+                    content = f"✅ PR #{pr_number} closed: {title}"
+                elif action == "merged":
+                    content = f"🎉 PR #{pr_number} merged: {title}"
+                else:
+                    continue
+                
+                # Send system message about GitHub activity
+                system_message = Message(
+                    content=content,
+                    sender_id="system",
+                    sender_username="GitHubBot",
+                    channel_id=channel_id,
+                    message_type="system",
+                    domain_data={
+                        "github_pr_number": pr_number,
+                        "github_action": action,
+                        "github_repo": repo_name
+                    }
+                )
+                
+                await db.messages.insert_one(system_message.dict())
+                
+                github_update = system_message.dict()
+                github_update["type"] = "new_message"
+                await manager.broadcast_to_channel(github_update, channel_id)
+        
+        return {"status": "processed"}
+    except Exception as e:
+        print(f"❌ GitHub webhook error: {e}")
+        return {"status": "error", "message": str(e)}
+
+@app.post("/api/agile/sprint", response_model=SprintInfo)
+async def create_sprint(
+    channel_id: str,
+    sprint_name: str,
+    start_date: datetime,
+    end_date: datetime,
+    story_points_planned: int = 0,
+    current_user: User = Depends(get_current_user)
+):
+    sprint = SprintInfo(
+        channel_id=channel_id,
+        sprint_name=sprint_name,
+        start_date=start_date,
+        end_date=end_date,
+        story_points_planned=story_points_planned
+    )
+    
+    await db.sprint_info.insert_one(sprint.dict())
+    
+    # Send system message about new sprint
+    system_message = Message(
+        content=f"🚀 New sprint created: {sprint_name} ({story_points_planned} points planned)",
+        sender_id="system",
+        sender_username="SprintBot",
+        channel_id=channel_id,
+        message_type="system"
+    )
+    
+    await db.messages.insert_one(system_message.dict())
+    
+    sprint_announcement = system_message.dict()
+    sprint_announcement["type"] = "new_message"
+    await manager.broadcast_to_channel(sprint_announcement, channel_id)
+    
+    return sprint
+
+@app.get("/api/agile/sprint/{channel_id}")
+async def get_active_sprint(channel_id: str, current_user: User = Depends(get_current_user)):
+    sprint = await db.sprint_info.find_one({"channel_id": channel_id, "status": "active"})
+    if sprint:
+        return SprintInfo(**sprint)
+    return None
 
 # Message endpoints
 @app.post("/api/messages", response_model=Message)
