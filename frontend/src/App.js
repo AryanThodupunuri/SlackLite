@@ -54,14 +54,40 @@ function App() {
   const [showNewChannelDialog, setShowNewChannelDialog] = useState(false);
   const [newChannelName, setNewChannelName] = useState('');
   const [newChannelDescription, setNewChannelDescription] = useState('');
+  const [newChannelDomain, setNewChannelDomain] = useState('general');
+  const [newChannelTTL, setNewChannelTTL] = useState(false);
+  const [newChannelTTLSeconds, setNewChannelTTLSeconds] = useState(3600);
   const [showEmojiPicker, setShowEmojiPicker] = useState(null);
   const [uploading, setUploading] = useState(false);
+
+  // Domain-specific state
+  const [playerStats, setPlayerStats] = useState([]);
+  const [gameSchedule, setGameSchedule] = useState([]);
+  const [flashcards, setFlashcards] = useState([]);
+  const [studyMaterials, setStudyMaterials] = useState([]);
+  const [activeSprint, setActiveSprint] = useState(null);
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
   // Popular emojis for quick access
   const popularEmojis = ['👍', '❤️', '😂', '😮', '😢', '😡', '👏', '🔥', '💯', '✅'];
+
+  const domainTypes = [
+    { value: 'general', label: 'General Chat', icon: '💬' },
+    { value: 'sports', label: 'Sports Team', icon: '🏀' },
+    { value: 'study', label: 'Study Group', icon: '📚' },
+    { value: 'agile', label: 'Agile/DevOps', icon: '🚀' }
+  ];
+
+  const ttlOptions = [
+    { value: 300, label: '5 minutes' },
+    { value: 900, label: '15 minutes' },
+    { value: 1800, label: '30 minutes' },
+    { value: 3600, label: '1 hour' },
+    { value: 21600, label: '6 hours' },
+    { value: 86400, label: '24 hours' }
+  ];
 
   // Configure axios defaults
   useEffect(() => {
