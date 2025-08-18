@@ -817,7 +817,8 @@ function SidebarContent({
   onUserSelect, 
   onCreateChannel, 
   onJoinChannel, 
-  onLogout 
+  onLogout,
+  domainTypes
 }) {
   return (
     <>
