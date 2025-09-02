@@ -28,6 +28,64 @@ A modern, real-time messaging application built with FastAPI, React, and MongoDB
 - **CORS configuration** for cross-origin requests
 - **Error handling** and validation
 
+## Getting Started
+
+### Prerequisites
+- **Node.js** 18+ and **Yarn**
+- **Python** 3.8+ and **pip**
+- **MongoDB** instance (local or cloud)
+
+### Installation
+
+1. **Clone and setup the project:**
+```bash
+git clone <repository-url>
+cd slacklite
+```
+
+2. **Backend setup:**
+```bash
+cd backend
+pip install -r requirements.txt
+
+# Create .env file
+echo "MONGO_URL=mongodb://localhost:27017" > .env
+echo "JWT_SECRET=your-secret-key-here" >> .env
+```
+
+3. **Frontend setup:**
+```bash
+cd frontend
+yarn install
+
+# Create .env file
+echo "REACT_APP_BACKEND_URL=http://localhost:8001" > .env
+```
+
+### Running the Application
+
+1. **Start MongoDB:**
+```bash
+# If using local MongoDB
+mongod
+```
+
+2. **Start the backend server:**
+```bash
+cd backend
+python server.py
+# Server runs on http://localhost:8001
+```
+
+3. **Start the frontend:**
+```bash
+cd frontend
+yarn start
+# App runs on http://localhost:3000
+```
+
+4. **Open your browser and navigate to `http://localhost:3000`**
+
 ## Architecture
 
 ### Backend (FastAPI)
@@ -112,64 +170,6 @@ A modern, real-time messaging application built with FastAPI, React, and MongoDB
   created_at: DateTime    // Message creation timestamp
 }
 ```
-
-## 🚀 Getting Started
-
-### Prerequisites
-- **Node.js** 18+ and **Yarn**
-- **Python** 3.8+ and **pip**
-- **MongoDB** instance (local or cloud)
-
-### Installation
-
-1. **Clone and setup the project:**
-```bash
-git clone <repository-url>
-cd slacklite
-```
-
-2. **Backend setup:**
-```bash
-cd backend
-pip install -r requirements.txt
-
-# Create .env file
-echo "MONGO_URL=mongodb://localhost:27017" > .env
-echo "JWT_SECRET=your-secret-key-here" >> .env
-```
-
-3. **Frontend setup:**
-```bash
-cd frontend
-yarn install
-
-# Create .env file
-echo "REACT_APP_BACKEND_URL=http://localhost:8001" > .env
-```
-
-### Running the Application
-
-1. **Start MongoDB:**
-```bash
-# If using local MongoDB
-mongod
-```
-
-2. **Start the backend server:**
-```bash
-cd backend
-python server.py
-# Server runs on http://localhost:8001
-```
-
-3. **Start the frontend:**
-```bash
-cd frontend
-yarn start
-# App runs on http://localhost:3000
-```
-
-4. **Open your browser and navigate to `http://localhost:3000`**
 
 ## Usage Guide
 
