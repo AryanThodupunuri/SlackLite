@@ -2,11 +2,9 @@
 
 A modern, real-time messaging application built with FastAPI, React, and MongoDB. Features WebSocket-based messaging, channel management, direct messaging, file uploads, emoji reactions, and message editing.
 
-![SlackLite Demo](https://images.unsplash.com/photo-1611224923853-80b023f02d71?w=800&h=400&fit=crop)
+## Features
 
-## ✨ Features
-
-### 🚀 Core Messaging
+### Core Messaging
 - **Real-time messaging** with WebSocket connections
 - **Channel-based communication** (public channels)
 - **Direct 1:1 messaging** between users
@@ -14,7 +12,7 @@ A modern, real-time messaging application built with FastAPI, React, and MongoDB
 - **Message history** and pagination support
 - **User presence tracking** (online/offline status)
 
-### 🎨 Advanced Features  
+### Advanced Features  
 - **Message editing** with edit indicators
 - **Emoji reactions** on messages with popular emoji picker
 - **File uploads** (images, documents, PDFs)
@@ -22,7 +20,7 @@ A modern, real-time messaging application built with FastAPI, React, and MongoDB
 - **User authentication** with JWT tokens
 - **Mobile-responsive design** with modern UI
 
-### 🔧 Technical Features
+### Technical Features
 - **WebSocket connection management** for real-time updates
 - **JWT-based authentication** with secure token handling
 - **MongoDB integration** with efficient message storage
@@ -30,7 +28,7 @@ A modern, real-time messaging application built with FastAPI, React, and MongoDB
 - **CORS configuration** for cross-origin requests
 - **Error handling** and validation
 
-## 🏗️ Architecture
+## Architecture
 
 ### Backend (FastAPI)
 ```
@@ -173,7 +171,7 @@ yarn start
 
 4. **Open your browser and navigate to `http://localhost:3000`**
 
-## 🎯 Usage Guide
+## Usage Guide
 
 ### Getting Started
 1. **Create an account** or **login** with existing credentials
@@ -196,7 +194,7 @@ yarn start
 - **Online Status**: Green dot indicates online users
 - **Message History**: Scroll up to load previous messages
 
-## 🔧 API Reference
+## API Reference
 
 ### Authentication Endpoints
 ```
@@ -232,7 +230,7 @@ POST /api/upload                      # Upload file (returns file URL)
 WebSocket: /api/ws/{jwt_token}        # Real-time message connection
 ```
 
-## 🔒 Security Features
+## Security Features
 
 ### Authentication & Authorization
 - **JWT Token Authentication**: Secure token-based authentication
@@ -250,7 +248,7 @@ WebSocket: /api/ws/{jwt_token}        # Real-time message connection
 - **Connection Management**: Automatic cleanup of disconnected users
 - **Message Broadcasting**: Secure message delivery to authorized recipients
 
-## 🎨 UI/UX Features
+## UI/UX Features
 
 ### Modern Design System
 - **Shadcn/ui Components**: Professional, accessible UI components
@@ -283,7 +281,7 @@ WebSocket: /api/ws/{jwt_token}        # Real-time message connection
 - **Push Notifications**: Real-time message notifications (planned)
 - **App-like Experience**: Full-screen mobile web app experience
 
-## 🚀 Performance Optimizations
+## Performance Optimizations
 
 ### Frontend Performance
 - **Component Memoization**: React.memo for expensive components
@@ -302,7 +300,7 @@ WebSocket: /api/ws/{jwt_token}        # Real-time message connection
 - **API Response Caching**: Planned Redis integration
 - **WebSocket Message Buffering**: Efficient message delivery
 
-## 🛠️ Development
+## Development
 
 ### Code Style & Standards
 - **ESLint Configuration**: Consistent JavaScript/React code style
@@ -333,7 +331,7 @@ docker-compose up -d
 kubectl apply -f k8s/
 ```
 
-## 🤝 Contributing
+## Contributing
 
 ### Development Setup
 1. Fork the repository
@@ -385,15 +383,6 @@ kubectl apply -f k8s/
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- **FastAPI**: For the excellent async web framework
-- **React**: For the powerful frontend library
-- **Shadcn/ui**: For beautiful, accessible UI components
-- **MongoDB**: For flexible document storage
-- **Tailwind CSS**: For utility-first styling
-- **WebSocket Protocol**: For real-time communication standards
 
 ---
 
